@@ -14,6 +14,9 @@ let isTranslating = false;
 function showError(message) {
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 3000);
 }
 
 // Function to clear error messages
@@ -21,11 +24,10 @@ function clearError() {
     errorDiv.style.display = 'none';
 }
 
-// Function to show loading state
-function showLoading(message = 'Extracting...') {
+// Function to show loading state (only used for article extraction)
+function showLoading() {
     refreshButton.disabled = true;
     loadingIndicator.style.display = 'flex';
-    loadingIndicator.querySelector('span').textContent = message;
 }
 
 // Function to hide loading state
@@ -55,32 +57,39 @@ async function applyFontSettings() {
 // Function to switch tabs
 function switchTab(tabName) {
     // Update tab buttons
-    document.querySelectorAll('.tab').forEach(tab => {
+    document.querySelectorAll('.tab-button').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
     });
 
     // Update tab contents
     document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === `${tabName}-tab`);
+        content.style.display = content.id === `${tabName}-tab` ? 'block' : 'none';
     });
 
     currentTab = tabName;
 }
 
+// Function to toggle settings panel
+function toggleSettings(show) {
+    settingsPanel.classList.toggle('active', show);
+}
+
 // Function to update translate button state
 function updateTranslateButton(isTranslating) {
-    translateButton.textContent = isTranslating ? 'Stop' : 'Translate';
-    translateButton.style.background = isTranslating ? '#dc3545' : '#4CAF50';
+    const playIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+    const stopIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16"/></svg>`;
+    
+    translateButton.innerHTML = isTranslating ? stopIcon : playIcon;
+    translateButton.title = isTranslating ? '停止翻译' : '开始翻译';
+    translateButton.style.color = isTranslating ? 'rgb(220 38 38)' : 'rgb(100 116 139)';
 }
 
 // Function to handle translation
 async function handleTranslation() {
     if (isTranslating) {
-        // Stop translation
         Settings.stopTranslation();
         isTranslating = false;
         updateTranslateButton(false);
-        hideLoading();
         return;
     }
 
@@ -89,13 +98,11 @@ async function handleTranslation() {
         return;
     }
 
-    // Clear previous translation and error message
     translationArea.value = '';
     clearError();
     
     isTranslating = true;
     updateTranslateButton(true);
-    showLoading('Translating...');
     switchTab('translation');
 
     await Settings.translate(
@@ -105,13 +112,11 @@ async function handleTranslation() {
             translationArea.value += chunk;
         },
         (error) => {
-            hideLoading();
             showError(error);
             isTranslating = false;
             updateTranslateButton(false);
         },
         () => {
-            hideLoading();
             isTranslating = false;
             updateTranslateButton(false);
         }
@@ -130,7 +135,6 @@ async function loadSettingsIntoForm() {
     document.getElementById('fontFamily').value = settings.font_family;
     document.getElementById('fontSize').value = settings.font_size;
     
-    // Apply font settings to text areas
     await applyFontSettings();
 }
 
@@ -150,9 +154,7 @@ async function saveSettingsFromForm() {
     if (await Settings.save(settings)) {
         showError('Settings saved successfully');
         await applyFontSettings();
-        setTimeout(() => {
-            clearError();
-        }, 2000);
+        toggleSettings(false);
     } else {
         showError('Failed to save settings');
     }
@@ -193,19 +195,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize UI elements
     refreshButton = document.getElementById('refreshButton');
     translateButton = document.getElementById('translateButton');
+    settingsButton = document.getElementById('settingsButton');
+    settingsPanel = document.getElementById('settings-panel');
     loadingIndicator = document.getElementById('loading');
     errorDiv = document.getElementById('error');
     contentArea = document.getElementById('contentArea');
     translationArea = document.getElementById('translationArea');
     
     // Set up tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
+    document.querySelectorAll('.tab-button').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
     // Set up buttons
     refreshButton.addEventListener('click', requestContent);
     translateButton.addEventListener('click', handleTranslation);
+    settingsButton.addEventListener('click', () => toggleSettings(true));
+    document.getElementById('closeSettings').addEventListener('click', () => toggleSettings(false));
     document.getElementById('saveSettings').addEventListener('click', saveSettingsFromForm);
     
     // Load initial settings

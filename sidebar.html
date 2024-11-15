@@ -1,223 +1,377 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Article Translator</title>
     <style>
         body {
             margin: 0;
-            padding: 10px;
-            background: #f5f5f5;
+            padding: 0;
             font-family: system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            background: rgb(248 250 252);
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            box-sizing: border-box;
+            min-width: 320px; /* Minimum width but can expand */
         }
-        .top-bar {
+
+        /* Header styles */
+        .header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            min-height: 32px;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid rgb(226 232 240);
+            background: white;
+            width: 100%;
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevent header from shrinking */
         }
-        #controls {
+
+        .tab-buttons {
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            flex-grow: 1; /* Allow tabs to take available space */
         }
-        .button {
-            padding: 5px 10px;
-            cursor: pointer;
-            background: #4CAF50;
-            color: white;
+
+        .tab-button {
+            padding: 4px 12px;
+            font-size: 14px;
+            color: rgb(71 85 105);
+            background: none;
             border: none;
-            border-radius: 3px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+
+        .tab-button:hover {
+            background: rgb(248 250 252);
+        }
+
+        .tab-button.active {
+            background: rgb(241 245 249);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+
+        .icon-button {
+            width: 32px;
             height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            border-radius: 4px;
+            color: rgb(100 116 139);
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0; /* Prevent icons from shrinking */
         }
-        .button:hover {
-            background: #45a049;
+
+        .icon-button:hover {
+            background: rgb(241 245 249);
+            color: rgb(51 65 85);
         }
-        .button:disabled {
-            background: #cccccc;
+
+        .icon-button:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
-        .tabs {
+
+        /* Content styles */
+        .content {
+            flex: 1;
+            padding: 12px;
+            background: rgb(248 250 252);
             display: flex;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #ccc;
+            flex-direction: column;
+            min-height: 0; /* Important for flex child scrolling */
+            width: 100%;
+            box-sizing: border-box;
         }
-        .tab {
-            padding: 8px 16px;
-            cursor: pointer;
-            background: #f5f5f5;
-            border: 1px solid #ccc;
-            border-bottom: none;
-            margin-right: 4px;
-            border-radius: 4px 4px 0 0;
-        }
-        .tab.active {
-            background: white;
-            border-bottom: 1px solid white;
-            margin-bottom: -1px;
-        }
+
         .tab-content {
             display: none;
-            flex: 1;
-            overflow: hidden;
+            height: 100%;
+            width: 100%;
         }
+
         .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-area {
+            width: 100%;
+            height: 100%;
+            resize: none;
+            padding: 8px;
+            background: white;
+            border: 1px solid rgb(226 232 240);
+            border-radius: 6px;
+            color: rgb(71 85 105);
+            font-family: inherit;
+            line-height: 1.5;
+            box-sizing: border-box;
+            flex: 1;
+        }
+
+        .content-area:focus {
+            outline: none;
+            border-color: rgb(148 163 184);
+            box-shadow: 0 0 0 1px rgb(148 163 184);
+        }
+
+        /* Settings panel */
+        .settings-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: white;
+            z-index: 1000;
+            padding: 16px;
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .settings-panel.active {
             display: block;
         }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: rgb(51 65 85);
+        }
+
+        .settings-close {
+            padding: 4px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: rgb(100 116 139);
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .settings-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgb(51 65 85);
+            margin-bottom: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+            width: 100%;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: rgb(71 85 105);
+            margin-bottom: 4px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid rgb(226 232 240);
+            border-radius: 4px;
+            font-size: 14px;
+            color: rgb(51 65 85);
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* Loading indicator */
         #loading {
             display: none;
-            align-items: center;
-            gap: 5px;
-            color: #666;
-            height: 32px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            text-align: center;
         }
+
         .spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #3498db;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgb(226 232 240);
+            border-top: 2px solid rgb(51 65 85);
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin: 0 auto 8px;
         }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .content-area {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 10px;
-            box-sizing: border-box;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            border: 1px solid #ccc;
-            background: white;
-            line-height: 1.5;
-            resize: none;
-        }
+
+        /* Error message */
         #error {
-            color: red;
-            margin-left: auto;
-            font-size: 12px;
-            height: 32px;
-            line-height: 32px;
-        }
-        .settings-group {
-            margin-bottom: 15px;
-            height: 100%;
-            overflow-y: auto;
-        }
-        .settings-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .settings-group input {
-            width: 100%;
-            padding: 5px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-        .settings-group textarea {
-            width: 100%;
-            padding: 5px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-            resize: vertical;
-            min-height: 80px;
-            font-family: monospace;
-        }
-        .settings-section {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        .settings-section:last-child {
-            border-bottom: none;
-        }
-        .settings-section-title {
+            display: none;
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgb(254 242 242);
+            color: rgb(185 28 28);
+            padding: 8px 16px;
+            border-radius: 4px;
             font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #333;
+            z-index: 2000;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div id="controls">
-            <button id="refreshButton" class="button">Extract Article</button>
-            <button id="translateButton" class="button">Translate</button>
+    <div class="header">
+        <div class="tab-buttons">
+            <button class="tab-button active" data-tab="content">原文</button>
+            <button class="tab-button" data-tab="translation">译文</button>
         </div>
-        <div id="loading">
-            <div class="spinner"></div>
-            <span>Extracting...</span>
+        <div class="action-buttons">
+            <button id="refreshButton" class="icon-button" title="提取原文">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M3 21v-5h5"/>
+                </svg>
+            </button>
+            <button id="translateButton" class="icon-button" title="开始翻译">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+            </button>
+            <button id="settingsButton" class="icon-button" title="设置">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 7h-9"/>
+                    <path d="M14 17H5"/>
+                    <circle cx="17" cy="17" r="3"/>
+                    <circle cx="7" cy="7" r="3"/>
+                </svg>
+            </button>
         </div>
-        <div id="error"></div>
     </div>
 
-    <div class="tabs">
-        <div class="tab active" data-tab="content">Original</div>
-        <div class="tab" data-tab="translation">Translation</div>
-        <div class="tab" data-tab="settings">Settings</div>
+    <div class="content">
+        <div id="content-tab" class="tab-content active">
+            <textarea id="contentArea" class="content-area" readonly placeholder="页面原文将显示在这里..."></textarea>
+        </div>
+        <div id="translation-tab" class="tab-content">
+            <textarea id="translationArea" class="content-area" readonly placeholder="翻译后的文本将显示在这里..."></textarea>
+        </div>
     </div>
 
-    <div id="content-tab" class="tab-content active">
-        <textarea id="contentArea" class="content-area" readonly wrap="soft"></textarea>
-    </div>
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-header">
+            <div class="settings-title">设置</div>
+            <button id="closeSettings" class="settings-close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
 
-    <div id="translation-tab" class="tab-content">
-        <textarea id="translationArea" class="content-area" readonly wrap="soft"></textarea>
-    </div>
-
-    <div id="settings-tab" class="tab-content">
-        <div class="settings-group">
-            <div class="settings-section">
-                <div class="settings-section-title">LLM Settings</div>
+        <div class="settings-section">
+            <div class="settings-section-title">LLM Settings</div>
+            <div class="form-group">
                 <label for="baseUrl">Base URL:</label>
                 <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1">
-                
+            </div>
+            <div class="form-group">
                 <label for="apiKey">API Key:</label>
                 <input type="password" id="apiKey">
-                
+            </div>
+            <div class="form-group">
                 <label for="model">Model Name:</label>
                 <input type="text" id="model" placeholder="gpt-3.5-turbo">
-                
+            </div>
+            <div class="form-group">
                 <label for="temperature">Temperature:</label>
                 <input type="number" id="temperature" min="0" max="2" step="0.1">
             </div>
+        </div>
 
-            <div class="settings-section">
-                <div class="settings-section-title">Translation Settings</div>
+        <div class="settings-section">
+            <div class="settings-section-title">Translation Settings</div>
+            <div class="form-group">
                 <label for="systemPrompt">System Prompt:</label>
                 <textarea id="systemPrompt"></textarea>
-                
+            </div>
+            <div class="form-group">
                 <label for="userPrompt">User Prompt:</label>
                 <textarea id="userPrompt"></textarea>
             </div>
+        </div>
 
-            <div class="settings-section">
-                <div class="settings-section-title">Text Appearance</div>
+        <div class="settings-section">
+            <div class="settings-section-title">Text Appearance</div>
+            <div class="form-group">
                 <label for="fontFamily">Font Family:</label>
                 <select id="fontFamily">
+                    <option value="system-ui, -apple-system, sans-serif">System Default</option>
                     <option value="monospace">Monospace</option>
                     <option value="Arial, sans-serif">Arial</option>
                     <option value="Times New Roman, serif">Times New Roman</option>
                     <option value="Microsoft YaHei, sans-serif">Microsoft YaHei</option>
                     <option value="SimSun, serif">SimSun</option>
                 </select>
-
-                <label for="fontSize">Font Size (px):</label>
-                <input type="number" id="fontSize" min="8" max="24" step="1" value="12">
             </div>
-            
-            <button id="saveSettings" class="button">Save Settings</button>
+            <div class="form-group">
+                <label for="fontSize">Font Size (px):</label>
+                <input type="number" id="fontSize" min="8" max="24" step="1" value="14">
+            </div>
         </div>
+
+        <button id="saveSettings" class="icon-button" style="width: 100%; margin-top: 16px; background: rgb(51 65 85); color: white; padding: 8px;">
+            Save Settings
+        </button>
     </div>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">Processing...</div>
+    </div>
+
+    <div id="error"></div>
 
     <script src="settings.js"></script>
     <script src="sidebar.js"></script>
