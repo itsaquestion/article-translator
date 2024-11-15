@@ -89,8 +89,9 @@ async function handleTranslation() {
         return;
     }
 
-    // Clear previous translation
+    // Clear previous translation and error message
     translationArea.value = '';
+    clearError();
     
     isTranslating = true;
     updateTranslateButton(true);
@@ -102,7 +103,6 @@ async function handleTranslation() {
         currentUrl,
         (chunk) => {
             translationArea.value += chunk;
-            // Removed auto-scroll to allow reading previous content during translation
         },
         (error) => {
             hideLoading();
