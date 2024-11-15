@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "HTML Viewer Sidebar",
+  "name": "Content Extractor",
   "version": "1.0",
-  "description": "Display page HTML in sidebar",
+  "description": "Extract main content in markdown format",
   "permissions": [
     "activeTab",
     "scripting",
@@ -17,6 +17,10 @@
   },
   "content_scripts": [{
     "matches": ["<all_urls>"],
-    "js": ["content.js"]
+    "js": [
+      "libs/Readability.js",
+      "libs/turndown.js",
+      "content.js"
+    ]
   }]
 }

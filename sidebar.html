@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>HTML Viewer</title>
+    <title>Content Extractor</title>
     <style>
         body {
             margin: 0;
@@ -47,7 +47,7 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        #htmlContent {
+        #contentArea {
             width: 100%;
             height: calc(95vh - 40px);
             margin: 0;
@@ -70,19 +70,25 @@
             font-size: 12px;
             margin-left: auto;
         }
+        #title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div id="controls">
-        <button id="refreshButton">Refresh HTML</button>
+        <button id="refreshButton">Extract Content</button>
         <div id="loading">
             <div class="spinner"></div>
-            <span>Loading...</span>
+            <span>Extracting...</span>
         </div>
         <div id="status"></div>
     </div>
     <div id="error"></div>
-    <textarea id="htmlContent" readonly></textarea>
+    <div id="title"></div>
+    <textarea id="contentArea" readonly></textarea>
     <script src="sidebar.js"></script>
 </body>
 </html>

@@ -3,7 +3,8 @@ let refreshButton;
 let loadingIndicator;
 let statusElement;
 let errorDiv;
-let htmlContent;
+let contentArea;
+let titleElement;
 
 // Function to display error messages
 function showError(message) {
@@ -35,13 +36,19 @@ function updateStatus(url) {
     statusElement.textContent = `Current: ${displayUrl}`;
 }
 
-// Function to update the HTML content
-function updateContent(html) {
-    htmlContent.value = html;
+// Function to update the content
+function updateContent(markdown, title) {
+    if (title) {
+        titleElement.textContent = title;
+        titleElement.style.display = 'block';
+    } else {
+        titleElement.style.display = 'none';
+    }
+    contentArea.value = markdown;
 }
 
-// Function to request HTML content
-function requestHTML() {
+// Function to request content
+function requestContent() {
     clearError();
     showLoading();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -64,7 +71,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             showLoading();
         } else if (message.status === 'complete') {
             hideLoading();
-            updateContent(message.html);
+            updateContent(message.markdown, message.title);
         }
         if (message.url) {
             updateStatus(message.url);
@@ -79,18 +86,19 @@ document.addEventListener('DOMContentLoaded', () => {
     loadingIndicator = document.getElementById('loading');
     statusElement = document.getElementById('status');
     errorDiv = document.getElementById('error');
-    htmlContent = document.getElementById('htmlContent');
+    contentArea = document.getElementById('contentArea');
+    titleElement = document.getElementById('title');
     
     // Set up refresh button
-    refreshButton.addEventListener('click', requestHTML);
+    refreshButton.addEventListener('click', requestContent);
     
     // Initial content request
-    requestHTML();
+    requestContent();
 });
 
 // Request when sidebar becomes visible
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-        requestHTML();
+        requestContent();
     }
 });
