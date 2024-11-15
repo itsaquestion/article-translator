@@ -98,6 +98,7 @@ async function loadSettingsIntoForm() {
     const settings = await Settings.load();
     document.getElementById('baseUrl').value = settings.base_url;
     document.getElementById('apiKey').value = settings.api_key;
+    document.getElementById('model').value = settings.model;
     document.getElementById('temperature').value = settings.temperature;
     document.getElementById('systemPrompt').value = settings.system_prompt;
     document.getElementById('userPrompt').value = settings.user_prompt;
@@ -108,6 +109,7 @@ async function saveSettingsFromForm() {
     const settings = {
         base_url: document.getElementById('baseUrl').value.trim(),
         api_key: document.getElementById('apiKey').value.trim(),
+        model: document.getElementById('model').value.trim(),
         temperature: parseFloat(document.getElementById('temperature').value),
         system_prompt: document.getElementById('systemPrompt').value.trim(),
         user_prompt: document.getElementById('userPrompt').value.trim()

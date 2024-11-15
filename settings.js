@@ -3,6 +3,7 @@ class Settings {
         base_url: 'https://api.openai.com/v1',
         api_key: '',
         temperature: 0.7,
+        model: 'gpt-3.5-turbo',
         system_prompt: 'You are a professional translator. Translate the following markdown content to Chinese, keeping the markdown format intact.',
         user_prompt: 'Translate the following content from {domain}:\n\n{content}'
     };
@@ -34,7 +35,7 @@ class Settings {
             .replace('{content}', content);
 
         return {
-            model: 'gpt-3.5-turbo',
+            model: settings.model,
             messages: [
                 { role: 'system', content: settings.system_prompt },
                 { role: 'user', content: userPrompt }
