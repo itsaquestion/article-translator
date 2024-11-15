@@ -8,6 +8,8 @@ class Settings {
         user_prompt: 'Translate the following content from {domain}:\n\n{content}'
     };
 
+    static controller = null;
+
     static async load() {
         try {
             const result = await chrome.storage.local.get('settings');
@@ -45,8 +47,21 @@ class Settings {
         };
     }
 
+    static stopTranslation() {
+        if (this.controller) {
+            this.controller.abort();
+            this.controller = null;
+        }
+    }
+
     static async translate(content, domain, onChunk, onError, onComplete) {
         try {
+            // Stop any existing translation
+            this.stopTranslation();
+            
+            // Create new controller for this translation
+            this.controller = new AbortController();
+            
             const settings = await this.load();
             if (!settings.api_key) {
                 throw new Error('API key not set');
@@ -59,7 +74,8 @@ class Settings {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${settings.api_key}`
                 },
-                body: JSON.stringify(prompt)
+                body: JSON.stringify(prompt),
+                signal: this.controller.signal
             });
 
             if (!response.ok) {
@@ -92,9 +108,15 @@ class Settings {
                 }
             }
             
+            this.controller = null;
             onComplete();
         } catch (error) {
-            onError(error.message);
+            this.controller = null;
+            if (error.name === 'AbortError') {
+                onError('Translation stopped');
+            } else {
+                onError(error.message);
+            }
         }
     }
 }

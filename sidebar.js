@@ -8,6 +8,7 @@ let translationArea;
 let currentTab = 'content';
 let currentContent = '';
 let currentUrl = '';
+let isTranslating = false;
 
 // Function to display error messages
 function showError(message) {
@@ -23,7 +24,6 @@ function clearError() {
 // Function to show loading state
 function showLoading(message = 'Extracting...') {
     refreshButton.disabled = true;
-    translateButton.disabled = true;
     loadingIndicator.style.display = 'flex';
     loadingIndicator.querySelector('span').textContent = message;
 }
@@ -31,7 +31,6 @@ function showLoading(message = 'Extracting...') {
 // Function to hide loading state
 function hideLoading() {
     refreshButton.disabled = false;
-    translateButton.disabled = false;
     loadingIndicator.style.display = 'none';
 }
 
@@ -56,15 +55,34 @@ function switchTab(tabName) {
     currentTab = tabName;
 }
 
+// Function to update translate button state
+function updateTranslateButton(isTranslating) {
+    translateButton.textContent = isTranslating ? 'Stop' : 'Translate';
+    translateButton.style.background = isTranslating ? '#dc3545' : '#4CAF50';
+}
+
 // Function to handle translation
 async function handleTranslation() {
+    if (isTranslating) {
+        // Stop translation
+        Settings.stopTranslation();
+        isTranslating = false;
+        updateTranslateButton(false);
+        hideLoading();
+        return;
+    }
+
     if (!currentContent) {
         showError('No content to translate');
         return;
     }
 
-    showLoading('Translating...');
+    // Clear previous translation
     translationArea.value = '';
+    
+    isTranslating = true;
+    updateTranslateButton(true);
+    showLoading('Translating...');
     switchTab('translation');
 
     await Settings.translate(
@@ -77,9 +95,13 @@ async function handleTranslation() {
         (error) => {
             hideLoading();
             showError(error);
+            isTranslating = false;
+            updateTranslateButton(false);
         },
         () => {
             hideLoading();
+            isTranslating = false;
+            updateTranslateButton(false);
         }
     );
 }
