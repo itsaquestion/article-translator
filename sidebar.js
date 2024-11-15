@@ -2,7 +2,6 @@
 let refreshButton;
 let translateButton;
 let loadingIndicator;
-let statusElement;
 let errorDiv;
 let contentArea;
 let translationArea;
@@ -27,7 +26,6 @@ function showLoading(message = 'Extracting...') {
     translateButton.disabled = true;
     loadingIndicator.style.display = 'flex';
     loadingIndicator.querySelector('span').textContent = message;
-    statusElement.textContent = 'Waiting...';
 }
 
 // Function to hide loading state
@@ -35,13 +33,6 @@ function hideLoading() {
     refreshButton.disabled = false;
     translateButton.disabled = false;
     loadingIndicator.style.display = 'none';
-}
-
-// Function to update status
-function updateStatus(url) {
-    currentUrl = url;
-    const displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
-    statusElement.textContent = `Current: ${displayUrl}`;
 }
 
 // Function to update the content
@@ -116,11 +107,9 @@ async function saveSettingsFromForm() {
     };
 
     if (await Settings.save(settings)) {
-        statusElement.textContent = 'Settings saved successfully';
+        showError('Settings saved successfully');
         setTimeout(() => {
-            if (statusElement.textContent === 'Settings saved successfully') {
-                statusElement.textContent = currentUrl ? `Current: ${currentUrl}` : '';
-            }
+            clearError();
         }, 2000);
     } else {
         showError('Failed to save settings');
@@ -134,6 +123,7 @@ function requestContent() {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
             chrome.tabs.sendMessage(tabs[0].id, { action: 'getHTML' });
+            currentUrl = tabs[0].url;
         } else {
             hideLoading();
             showError('No active tab found');
@@ -153,9 +143,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             hideLoading();
             updateContent(message.markdown);
         }
-        if (message.url) {
-            updateStatus(message.url);
-        }
     }
 });
 
@@ -165,7 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshButton = document.getElementById('refreshButton');
     translateButton = document.getElementById('translateButton');
     loadingIndicator = document.getElementById('loading');
-    statusElement = document.getElementById('status');
     errorDiv = document.getElementById('error');
     contentArea = document.getElementById('contentArea');
     translationArea = document.getElementById('translationArea');

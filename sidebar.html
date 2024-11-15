@@ -8,6 +8,30 @@
             padding: 10px;
             background: #f5f5f5;
             font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .button {
+            padding: 5px 10px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
         }
         .tabs {
             display: flex;
@@ -30,31 +54,11 @@
         }
         .tab-content {
             display: none;
-            height: calc(95vh - 90px);
+            flex: 1;
+            overflow: hidden;
         }
         .tab-content.active {
             display: block;
-        }
-        #controls {
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .button {
-            padding: 5px 10px;
-            cursor: pointer;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 3px;
-        }
-        .button:hover {
-            background: #45a049;
-        }
-        .button:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
         }
         #loading {
             display: none;
@@ -84,42 +88,55 @@
             font-size: 12px;
             white-space: pre-wrap;
             word-wrap: break-word;
-            overflow: auto;
             border: 1px solid #ccc;
             background: white;
             line-height: 1.5;
+            resize: none;
         }
         #error {
             color: red;
             margin-bottom: 10px;
             display: none;
         }
-        #status {
-            color: #666;
-            font-size: 12px;
-            margin-left: auto;
-        }
         .settings-group {
             margin-bottom: 15px;
+            height: 100%;
+            overflow-y: auto;
         }
         .settings-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .settings-group input, .settings-group textarea {
+        .settings-group input {
             width: 100%;
             padding: 5px;
             margin-bottom: 10px;
             box-sizing: border-box;
         }
         .settings-group textarea {
-            height: 80px;
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 80px;
             font-family: monospace;
         }
     </style>
 </head>
 <body>
+    <div id="controls">
+        <button id="refreshButton" class="button">Extract Content</button>
+        <button id="translateButton" class="button">Translate</button>
+        <div id="loading">
+            <div class="spinner"></div>
+            <span>Extracting...</span>
+        </div>
+    </div>
+
+    <div id="error"></div>
+
     <div class="tabs">
         <div class="tab active" data-tab="content">Content</div>
         <div class="tab" data-tab="translation">Translation</div>
@@ -127,16 +144,6 @@
     </div>
 
     <div id="content-tab" class="tab-content active">
-        <div id="controls">
-            <button id="refreshButton" class="button">Extract Content</button>
-            <button id="translateButton" class="button">Translate</button>
-            <div id="loading">
-                <div class="spinner"></div>
-                <span>Extracting...</span>
-            </div>
-            <div id="status"></div>
-        </div>
-        <div id="error"></div>
         <textarea id="contentArea" class="content-area" readonly wrap="soft"></textarea>
     </div>
 
