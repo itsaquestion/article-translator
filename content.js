@@ -1,14 +1,45 @@
+// Function to send HTML content
+function sendHTML() {
+    try {
+        const html = document.documentElement.outerHTML;
+        chrome.runtime.sendMessage({ 
+            html: html,
+            status: 'complete',
+            url: window.location.href
+        });
+    } catch (error) {
+        chrome.runtime.sendMessage({ 
+            error: error.toString(),
+            status: 'error',
+            url: window.location.href
+        });
+    }
+}
+
 // Listen for messages from the sidebar
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    try {
-        if (request.action === 'getHTML') {
-            // Get the complete HTML of the page
-            const html = document.documentElement.outerHTML;
-            // Send it to the sidebar
-            chrome.runtime.sendMessage({ html: html });
+    if (request.action === 'getHTML') {
+        if (document.readyState === 'complete') {
+            sendHTML();
+        } else {
+            chrome.runtime.sendMessage({ 
+                status: 'loading',
+                url: window.location.href
+            });
         }
-    } catch (error) {
-        // Send any errors to the sidebar
-        chrome.runtime.sendMessage({ error: error.toString() });
+    }
+});
+
+// Send HTML automatically when page is fully loaded
+document.addEventListener('readystatechange', () => {
+    if (document.readyState === 'complete') {
+        sendHTML();
+    }
+});
+
+// Also send HTML when DOM content is loaded (backup)
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.readyState === 'complete') {
+        sendHTML();
     }
 });
