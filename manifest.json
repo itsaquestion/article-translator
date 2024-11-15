@@ -2,11 +2,15 @@
   "manifest_version": 3,
   "name": "Content Extractor",
   "version": "1.0",
-  "description": "Extract main content in markdown format",
+  "description": "Extract main content in markdown format with translation",
   "permissions": [
     "activeTab",
     "scripting",
-    "sidePanel"
+    "sidePanel",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "action": {},
   "side_panel": {

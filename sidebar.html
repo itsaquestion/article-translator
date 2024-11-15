@@ -7,6 +7,33 @@
             margin: 0;
             padding: 10px;
             background: #f5f5f5;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            background: #f5f5f5;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            margin-right: 4px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            height: calc(95vh - 90px);
+        }
+        .tab-content.active {
+            display: block;
         }
         #controls {
             margin-bottom: 10px;
@@ -14,7 +41,7 @@
             align-items: center;
             gap: 10px;
         }
-        #refreshButton {
+        .button {
             padding: 5px 10px;
             cursor: pointer;
             background: #4CAF50;
@@ -22,10 +49,10 @@
             border: none;
             border-radius: 3px;
         }
-        #refreshButton:hover {
+        .button:hover {
             background: #45a049;
         }
-        #refreshButton:disabled {
+        .button:disabled {
             background: #cccccc;
             cursor: not-allowed;
         }
@@ -47,9 +74,9 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        #contentArea {
+        .content-area {
             width: 100%;
-            height: calc(95vh - 40px);
+            height: 100%;
             margin: 0;
             padding: 10px;
             box-sizing: border-box;
@@ -72,19 +99,73 @@
             font-size: 12px;
             margin-left: auto;
         }
+        .settings-group {
+            margin-bottom: 15px;
+        }
+        .settings-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .settings-group input, .settings-group textarea {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .settings-group textarea {
+            height: 80px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
-    <div id="controls">
-        <button id="refreshButton">Extract Content</button>
-        <div id="loading">
-            <div class="spinner"></div>
-            <span>Extracting...</span>
-        </div>
-        <div id="status"></div>
+    <div class="tabs">
+        <div class="tab active" data-tab="content">Content</div>
+        <div class="tab" data-tab="translation">Translation</div>
+        <div class="tab" data-tab="settings">Settings</div>
     </div>
-    <div id="error"></div>
-    <textarea id="contentArea" readonly wrap="soft"></textarea>
+
+    <div id="content-tab" class="tab-content active">
+        <div id="controls">
+            <button id="refreshButton" class="button">Extract Content</button>
+            <button id="translateButton" class="button">Translate</button>
+            <div id="loading">
+                <div class="spinner"></div>
+                <span>Extracting...</span>
+            </div>
+            <div id="status"></div>
+        </div>
+        <div id="error"></div>
+        <textarea id="contentArea" class="content-area" readonly wrap="soft"></textarea>
+    </div>
+
+    <div id="translation-tab" class="tab-content">
+        <textarea id="translationArea" class="content-area" readonly wrap="soft"></textarea>
+    </div>
+
+    <div id="settings-tab" class="tab-content">
+        <div class="settings-group">
+            <label for="baseUrl">Base URL:</label>
+            <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1">
+            
+            <label for="apiKey">API Key:</label>
+            <input type="password" id="apiKey">
+            
+            <label for="temperature">Temperature:</label>
+            <input type="number" id="temperature" min="0" max="2" step="0.1">
+            
+            <label for="systemPrompt">System Prompt:</label>
+            <textarea id="systemPrompt"></textarea>
+            
+            <label for="userPrompt">User Prompt:</label>
+            <textarea id="userPrompt"></textarea>
+            
+            <button id="saveSettings" class="button">Save Settings</button>
+        </div>
+    </div>
+
+    <script src="settings.js"></script>
     <script src="sidebar.js"></script>
 </body>
 </html>
