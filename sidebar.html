@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Content Extractor</title>
+    <title>Article Translator</title>
     <style>
         body {
             margin: 0;
@@ -92,8 +92,6 @@
             margin: 0;
             padding: 10px;
             box-sizing: border-box;
-            font-family: monospace;
-            font-size: 12px;
             white-space: pre-wrap;
             word-wrap: break-word;
             border: 1px solid #ccc;
@@ -133,12 +131,26 @@
             min-height: 80px;
             font-family: monospace;
         }
+        .settings-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+        .settings-section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
     </style>
 </head>
 <body>
     <div class="top-bar">
         <div id="controls">
-            <button id="refreshButton" class="button">Extract Content</button>
+            <button id="refreshButton" class="button">Extract Article</button>
             <button id="translateButton" class="button">Translate</button>
         </div>
         <div id="loading">
@@ -149,7 +161,7 @@
     </div>
 
     <div class="tabs">
-        <div class="tab active" data-tab="content">Content</div>
+        <div class="tab active" data-tab="content">Original</div>
         <div class="tab" data-tab="translation">Translation</div>
         <div class="tab" data-tab="settings">Settings</div>
     </div>
@@ -164,23 +176,44 @@
 
     <div id="settings-tab" class="tab-content">
         <div class="settings-group">
-            <label for="baseUrl">Base URL:</label>
-            <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1">
-            
-            <label for="apiKey">API Key:</label>
-            <input type="password" id="apiKey">
-            
-            <label for="model">Model:</label>
-            <input type="text" id="model" placeholder="gpt-3.5-turbo">
-            
-            <label for="temperature">Temperature:</label>
-            <input type="number" id="temperature" min="0" max="2" step="0.1">
-            
-            <label for="systemPrompt">System Prompt:</label>
-            <textarea id="systemPrompt"></textarea>
-            
-            <label for="userPrompt">User Prompt:</label>
-            <textarea id="userPrompt"></textarea>
+            <div class="settings-section">
+                <div class="settings-section-title">LLM Settings</div>
+                <label for="baseUrl">Base URL:</label>
+                <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1">
+                
+                <label for="apiKey">API Key:</label>
+                <input type="password" id="apiKey">
+                
+                <label for="model">Model Name:</label>
+                <input type="text" id="model" placeholder="gpt-3.5-turbo">
+                
+                <label for="temperature">Temperature:</label>
+                <input type="number" id="temperature" min="0" max="2" step="0.1">
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">Translation Settings</div>
+                <label for="systemPrompt">System Prompt:</label>
+                <textarea id="systemPrompt"></textarea>
+                
+                <label for="userPrompt">User Prompt:</label>
+                <textarea id="userPrompt"></textarea>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">Text Appearance</div>
+                <label for="fontFamily">Font Family:</label>
+                <select id="fontFamily">
+                    <option value="monospace">Monospace</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="Times New Roman, serif">Times New Roman</option>
+                    <option value="Microsoft YaHei, sans-serif">Microsoft YaHei</option>
+                    <option value="SimSun, serif">SimSun</option>
+                </select>
+
+                <label for="fontSize">Font Size (px):</label>
+                <input type="number" id="fontSize" min="8" max="24" step="1" value="12">
+            </div>
             
             <button id="saveSettings" class="button">Save Settings</button>
         </div>

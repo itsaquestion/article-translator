@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Content Extractor",
+  "name": "Article Translator",
   "version": "1.0",
-  "description": "Extract main content in markdown format with translation",
+  "description": "Extract and translate articles with customizable LLM models",
   "permissions": [
     "activeTab",
     "scripting",

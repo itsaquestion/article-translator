@@ -40,6 +40,18 @@ function updateContent(markdown) {
     contentArea.value = markdown;
 }
 
+// Function to apply font settings
+async function applyFontSettings() {
+    const settings = await Settings.load();
+    const areas = [contentArea, translationArea];
+    areas.forEach(area => {
+        if (area) {
+            area.style.fontFamily = settings.font_family;
+            area.style.fontSize = `${settings.font_size}px`;
+        }
+    });
+}
+
 // Function to switch tabs
 function switchTab(tabName) {
     // Update tab buttons
@@ -90,7 +102,7 @@ async function handleTranslation() {
         currentUrl,
         (chunk) => {
             translationArea.value += chunk;
-            translationArea.scrollTop = translationArea.scrollHeight;
+            // Removed auto-scroll to allow reading previous content during translation
         },
         (error) => {
             hideLoading();
@@ -115,6 +127,11 @@ async function loadSettingsIntoForm() {
     document.getElementById('temperature').value = settings.temperature;
     document.getElementById('systemPrompt').value = settings.system_prompt;
     document.getElementById('userPrompt').value = settings.user_prompt;
+    document.getElementById('fontFamily').value = settings.font_family;
+    document.getElementById('fontSize').value = settings.font_size;
+    
+    // Apply font settings to text areas
+    await applyFontSettings();
 }
 
 // Function to save settings from form
@@ -125,11 +142,14 @@ async function saveSettingsFromForm() {
         model: document.getElementById('model').value.trim(),
         temperature: parseFloat(document.getElementById('temperature').value),
         system_prompt: document.getElementById('systemPrompt').value.trim(),
-        user_prompt: document.getElementById('userPrompt').value.trim()
+        user_prompt: document.getElementById('userPrompt').value.trim(),
+        font_family: document.getElementById('fontFamily').value,
+        font_size: document.getElementById('fontSize').value
     };
 
     if (await Settings.save(settings)) {
         showError('Settings saved successfully');
+        await applyFontSettings();
         setTimeout(() => {
             clearError();
         }, 2000);
