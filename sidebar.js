@@ -4,7 +4,6 @@ let loadingIndicator;
 let statusElement;
 let errorDiv;
 let contentArea;
-let titleElement;
 
 // Function to display error messages
 function showError(message) {
@@ -37,13 +36,7 @@ function updateStatus(url) {
 }
 
 // Function to update the content
-function updateContent(markdown, title) {
-    if (title) {
-        titleElement.textContent = title;
-        titleElement.style.display = 'block';
-    } else {
-        titleElement.style.display = 'none';
-    }
+function updateContent(markdown) {
     contentArea.value = markdown;
 }
 
@@ -71,7 +64,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             showLoading();
         } else if (message.status === 'complete') {
             hideLoading();
-            updateContent(message.markdown, message.title);
+            updateContent(message.markdown);
         }
         if (message.url) {
             updateStatus(message.url);
@@ -87,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
     statusElement = document.getElementById('status');
     errorDiv = document.getElementById('error');
     contentArea = document.getElementById('contentArea');
-    titleElement = document.getElementById('title');
     
     // Set up refresh button
     refreshButton.addEventListener('click', requestContent);

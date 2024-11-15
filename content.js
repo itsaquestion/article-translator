@@ -13,19 +13,36 @@ function extractContent() {
         // Parse the content
         const article = reader.parse();
         
-        // Create TurndownService instance
+        // Create TurndownService instance with custom rules
         const turndownService = new TurndownService({
             headingStyle: 'atx',
             codeBlockStyle: 'fenced'
         });
+
+        // Remove links but keep text
+        turndownService.addRule('removeLinks', {
+            filter: ['a'],
+            replacement: function(content) {
+                return content;
+            }
+        });
+
+        // Remove images completely
+        turndownService.addRule('removeImages', {
+            filter: ['img'],
+            replacement: function() {
+                return '';
+            }
+        });
         
-        // Convert to markdown
-        const markdown = turndownService.turndown(article.content);
+        // Combine title and content
+        const titleMarkdown = article.title ? `# ${article.title}\n\n` : '';
+        const contentMarkdown = turndownService.turndown(article.content);
+        const fullMarkdown = titleMarkdown + contentMarkdown;
         
         // Send the result
         chrome.runtime.sendMessage({ 
-            markdown: markdown,
-            title: article.title,
+            markdown: fullMarkdown,
             status: 'complete',
             url: window.location.href
         });
