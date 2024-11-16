@@ -3,10 +3,10 @@ class Settings {
         base_url: 'https://api.openai.com/v1',
         api_key: '',
         temperature: 0.7,
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         system_prompt: 'You are a professional translator. Translate the following markdown content to Chinese, keeping the markdown format intact.',
         user_prompt: 'Translate the following content from {domain}:\n\n{content}',
-        font_family: 'monospace',
+        font_family: 'system-ui, -apple-system, sans-serif',
         font_size: '12'
     };
 
