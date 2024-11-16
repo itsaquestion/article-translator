@@ -5,6 +5,7 @@ let loadingIndicator;
 let errorDiv;
 let contentArea;
 let translationArea;
+let copyButton;
 let currentTab = 'content';
 let currentContent = '';
 let currentUrl = '';
@@ -190,6 +191,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
+// Function to handle copy action
+async function handleCopy() {
+    try {
+        const activeTextArea = currentTab === 'content' ? contentArea : translationArea;
+        const text = activeTextArea.value;
+        
+        if (!text) {
+            showError('没有可复制的内容');
+            return;
+        }
+
+        await navigator.clipboard.writeText(text);
+        
+        // Visual feedback
+        const originalText = copyButton.innerHTML;
+        copyButton.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            已复制
+        `;
+        copyButton.style.color = 'rgb(34 197 94)';
+        
+        setTimeout(() => {
+            copyButton.innerHTML = originalText;
+            copyButton.style.color = '';
+        }, 2000);
+    } catch (error) {
+        showError('复制失败');
+        console.error('Copy failed:', error);
+    }
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize UI elements
@@ -201,6 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     errorDiv = document.getElementById('error');
     contentArea = document.getElementById('contentArea');
     translationArea = document.getElementById('translationArea');
+    copyButton = document.getElementById('copyButton');
     
     // Set up tab switching
     document.querySelectorAll('.tab-button').forEach(tab => {
@@ -213,6 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsButton.addEventListener('click', () => toggleSettings(true));
     document.getElementById('closeSettings').addEventListener('click', () => toggleSettings(false));
     document.getElementById('saveSettings').addEventListener('click', saveSettingsFromForm);
+    copyButton.addEventListener('click', handleCopy);
     
     // Load initial settings
     await loadSettingsIntoForm();

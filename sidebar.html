@@ -257,6 +257,41 @@
             z-index: 2000;
             white-space: nowrap;
         }
+
+        /* Footer toolbar styles */
+        .footer-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border-top: 1px solid rgb(226 232 240);
+            gap: 8px;
+        }
+
+        .toolbar-button {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: rgb(71 85 105);
+            background: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toolbar-button:hover {
+            background: rgb(241 245 249);
+            color: rgb(51 65 85);
+        }
+
+        .toolbar-button svg {
+            width: 14px;
+            height: 14px;
+        }
     </style>
 </head>
 <body>
@@ -297,6 +332,16 @@
         <div id="translation-tab" class="tab-content">
             <textarea id="translationArea" class="content-area" readonly placeholder="翻译后的文本将显示在这里..."></textarea>
         </div>
+    </div>
+
+    <div class="footer-toolbar">
+        <button id="copyButton" class="toolbar-button" title="复制到剪贴板">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            复制
+        </button>
     </div>
 
     <div id="settings-panel" class="settings-panel">
