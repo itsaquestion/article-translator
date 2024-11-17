@@ -74,7 +74,9 @@ class Settings {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${settings.api_key}`
+                    'Authorization': `Bearer ${settings.api_key}`,
+                    'HTTP-Referer': 'https://imtass.me', // Optional, for including your app on openrouter.ai rankings.
+                    'X-Title': 'Article Translator' // Optional. Shows in rankings on openrouter.ai.
                 },
                 body: JSON.stringify(prompt),
                 signal: this.controller.signal
