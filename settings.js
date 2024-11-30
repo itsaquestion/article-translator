@@ -45,7 +45,8 @@ class Settings {
                 { role: 'user', content: userPrompt }
             ],
             temperature: settings.temperature,
-            stream: true
+            stream: true,
+            max_tokens: 16384
         };
     }
 
