@@ -396,12 +396,30 @@
         <div class="settings-section">
             <div class="settings-section-title">Translation Settings</div>
             <div class="form-group">
-                <label for="systemPrompt">System Prompt:</label>
-                <textarea id="systemPrompt"></textarea>
+                <label for="translationSelect">Current Translation:</label>
+                <select id="translationSelect"></select>
             </div>
-            <div class="form-group">
-                <label for="userPrompt">User Prompt:</label>
-                <textarea id="userPrompt"></textarea>
+            <div id="translationSettings">
+                <div class="form-group">
+                    <label for="translationName">Translation Name:</label>
+                    <input type="text" id="translationName" placeholder="My Translation Setting">
+                </div>
+                <div class="form-group">
+                    <label for="systemPrompt">System Prompt:</label>
+                    <textarea id="systemPrompt"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="userPrompt">User Prompt:</label>
+                    <textarea id="userPrompt"></textarea>
+                </div>
+            </div>
+            <div class="translation-actions" style="display: flex; gap: 8px; margin-top: 12px;">
+                <button id="addTranslation" class="icon-button" style="flex: 1; background: rgb(51 65 85); color: white; padding: 4px 8px;">
+                    Add New Translation
+                </button>
+                <button id="removeTranslation" class="icon-button" style="flex: 1; background: rgb(239 68 68); color: white; padding: 4px 8px;">
+                    Remove Current Translation
+                </button>
             </div>
         </div>
 

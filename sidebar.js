@@ -140,37 +140,72 @@ async function populateBackendSelector() {
 				select.value = settings.currentBackend;
 }
 
+// Function to populate translation selector
+async function populateTranslationSelector() {
+    const settings = await Settings.load();
+    const select = document.getElementById('translationSelect');
+    select.innerHTML = '';
+    
+				settings.translations.forEach((translation, index) => {
+								const option = document.createElement('option');
+								option.value = index;
+								option.textContent = translation.name;
+        select.appendChild(option);
+				});
+    
+    select.value = settings.currentTranslation;
+}
+
 // Function to update backend settings form
 function updateBackendForm(backend) {
-    document.getElementById('backendName').value = backend.name;
-    document.getElementById('baseUrl').value = backend.base_url;
-    document.getElementById('apiKey').value = backend.api_key;
-    document.getElementById('model').value = backend.model;
+				document.getElementById('backendName').value = backend.name;
+				document.getElementById('baseUrl').value = backend.base_url;
+				document.getElementById('apiKey').value = backend.api_key;
+				document.getElementById('model').value = backend.model;
+}
+
+// Function to update translation settings form
+function updateTranslationForm(translation) {
+				document.getElementById('translationName').value = translation.name;
+				document.getElementById('systemPrompt').value = translation.system_prompt;
+				document.getElementById('userPrompt').value = translation.user_prompt;
 }
 
 // Function to get backend settings from form
 function getBackendFromForm() {
-    return {
+				return {
 								name: document.getElementById('backendName').value.trim(),
-        base_url: document.getElementById('baseUrl').value.trim(),
-        api_key: document.getElementById('apiKey').value.trim(),
-        model: document.getElementById('model').value.trim(),
-    };
+								base_url: document.getElementById('baseUrl').value.trim(),
+								api_key: document.getElementById('apiKey').value.trim(),
+								model: document.getElementById('model').value.trim()
+				};
+}
+
+// Function to get translation settings from form
+function getTranslationFromForm() {
+				return {
+								name: document.getElementById('translationName').value.trim(),
+								system_prompt: document.getElementById('systemPrompt').value.trim(),
+								user_prompt: document.getElementById('userPrompt').value.trim()
+				};
 }
 
 // Function to load settings into form
 async function loadSettingsIntoForm() {
 				const settings = await Settings.load();
 				const currentBackend = settings.backends[settings.currentBackend];
+				const currentTranslation = settings.translations[settings.currentTranslation];
 				
 				// Update backend selector and form
 				await populateBackendSelector();
 				updateBackendForm(currentBackend);
 				
+				// Update translation selector and form
+				await populateTranslationSelector();
+				updateTranslationForm(currentTranslation);
+				
 				// Update other settings
 				document.getElementById('temperature').value = settings.temperature;
-				document.getElementById('systemPrompt').value = settings.system_prompt;
-				document.getElementById('userPrompt').value = settings.user_prompt;
 				document.getElementById('fontFamily').value = settings.font_family;
 				document.getElementById('fontSize').value = settings.font_size;
 				
@@ -182,30 +217,28 @@ async function saveSettingsFromForm() {
 				try {
 								const settings = await Settings.load();
 								const currentBackendIndex = parseInt(document.getElementById('backendSelect').value);
+								const currentTranslationIndex = parseInt(document.getElementById('translationSelect').value);
 								
-								// Validate current backend index
+								// Validate current indices
 								if (isNaN(currentBackendIndex) || currentBackendIndex < 0 || currentBackendIndex >= settings.backends.length) {
 												throw new Error('Invalid backend selected');
+								}
+								if (isNaN(currentTranslationIndex) || currentTranslationIndex < 0 || currentTranslationIndex >= settings.translations.length) {
+												throw new Error('Invalid translation selected');
 								}
 								
 								// Update current backend settings
 								settings.backends[currentBackendIndex] = getBackendFromForm();
 								settings.currentBackend = currentBackendIndex;
 								
+								// Update current translation settings
+								settings.translations[currentTranslationIndex] = getTranslationFromForm();
+								settings.currentTranslation = currentTranslationIndex;
+								
 								// Update other settings
 								const temperature = parseFloat(document.getElementById('temperature').value);
 								if (!isNaN(temperature)) {
 												settings.temperature = temperature;
-								}
-								
-								const systemPrompt = document.getElementById('systemPrompt').value.trim();
-								if (systemPrompt) {
-												settings.system_prompt = systemPrompt;
-								}
-								
-								const userPrompt = document.getElementById('userPrompt').value.trim();
-								if (userPrompt) {
-												settings.user_prompt = userPrompt;
 								}
 								
 								const fontFamily = document.getElementById('fontFamily').value;
@@ -220,6 +253,7 @@ async function saveSettingsFromForm() {
 
 								if (await Settings.save(settings)) {
 												await populateBackendSelector(); // Refresh backend list
+												await populateTranslationSelector(); // Refresh translation list
 												showError('Settings saved successfully');
 												await applyFontSettings();
 												toggleSettings(false);
@@ -239,7 +273,7 @@ async function addNewBackend() {
 								name: 'New Backend',
 								base_url: 'https://api.openai.com/v1',
 								api_key: '',
-								model: 'gpt-3.5-turbo',
+								model: 'gpt-3.5-turbo'
 				});
 				settings.currentBackend = settings.backends.length - 1;
 				
@@ -268,6 +302,44 @@ async function removeCurrentBackend() {
 								showError('Backend removed');
 				} else {
 								showError('Failed to remove backend');
+				}
+}
+
+// Function to add new translation
+async function addNewTranslation() {
+				const settings = await Settings.load();
+				settings.translations.push({
+								name: 'New Translation',
+								system_prompt: 'You are a professional translator. Translate the following markdown content to Chinese, keeping the markdown format intact.',
+								user_prompt: 'Translate the following content from {domain}:\n\n{content}'
+				});
+				settings.currentTranslation = settings.translations.length - 1;
+				
+				if (await Settings.save(settings)) {
+								await loadSettingsIntoForm();
+								showError('New translation added');
+				} else {
+								showError('Failed to add translation');
+				}
+}
+
+// Function to remove current translation
+async function removeCurrentTranslation() {
+				const settings = await Settings.load();
+				if (settings.translations.length <= 1) {
+								showError('Cannot remove last translation');
+								return;
+				}
+				
+				const currentTranslationIndex = parseInt(document.getElementById('translationSelect').value);
+				settings.translations.splice(currentTranslationIndex, 1);
+				settings.currentTranslation = Math.min(currentTranslationIndex, settings.translations.length - 1);
+				
+				if (await Settings.save(settings)) {
+								await loadSettingsIntoForm();
+								showError('Translation removed');
+				} else {
+								showError('Failed to remove translation');
 				}
 }
 
@@ -369,6 +441,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('addBackend').addEventListener('click', addNewBackend);
     document.getElementById('removeBackend').addEventListener('click', removeCurrentBackend);
+    
+    // Set up translation management
+    document.getElementById('translationSelect').addEventListener('change', async (e) => {
+        const settings = await Settings.load();
+        const translation = settings.translations[e.target.value];
+        updateTranslationForm(translation);
+    });
+    
+    document.getElementById('addTranslation').addEventListener('click', addNewTranslation);
+    document.getElementById('removeTranslation').addEventListener('click', removeCurrentTranslation);
     
     // Load initial settings
     await loadSettingsIntoForm();

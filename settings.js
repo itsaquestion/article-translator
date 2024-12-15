@@ -5,23 +5,29 @@ class Settings {
             name: 'Default OpenAI',
             base_url: 'https://api.openai.com/v1',
             api_key: '',
-            model: 'gpt-4o-mini',
+            model: 'gpt-4o-mini'
+        }],
+        currentTranslation: 0,
+        translations: [{
+            name: 'Default Translation',
+            system_prompt: 'You are a professional translator. Translate the following markdown content to Chinese, keeping the markdown format intact.',
+            user_prompt: 'Translate the following content from {domain}:\n\n{content}'
         }],
         temperature: 0.7,
-        system_prompt: 'You are a professional translator. Translate the following markdown content to Chinese, keeping the markdown format intact.',
-        user_prompt: 'Translate the following content from {domain}:\n\n{content}',
         font_family: 'system-ui, -apple-system, sans-serif',
-        font_size: '12',
+        font_size: '12'
     };
+
+    static controller = null;
 
     static async ensureSettingsValid(settings) {
         // Ensure all required properties exist with defaults if missing
         const defaults = this.defaultSettings;
         settings.currentBackend = settings.currentBackend ?? defaults.currentBackend;
         settings.backends = settings.backends ?? [...defaults.backends];
+        settings.currentTranslation = settings.currentTranslation ?? defaults.currentTranslation;
+        settings.translations = settings.translations ?? [...defaults.translations];
         settings.temperature = settings.temperature ?? defaults.temperature;
-        settings.system_prompt = settings.system_prompt ?? defaults.system_prompt;
-        settings.user_prompt = settings.user_prompt ?? defaults.user_prompt;
         settings.font_family = settings.font_family ?? defaults.font_family;
         settings.font_size = settings.font_size ?? defaults.font_size;
 
@@ -30,13 +36,22 @@ class Settings {
             name: backend.name ?? 'Unnamed Backend',
             base_url: backend.base_url ?? defaults.backends[0].base_url,
             api_key: backend.api_key ?? '',
-            model: backend.model ?? defaults.backends[0].model,
+            model: backend.model ?? defaults.backends[0].model
         }));
+
+        // Ensure each translation setting has all required fields
+        settings.translations = settings.translations.map(translation => ({
+            name: translation.name ?? 'Unnamed Translation',
+            system_prompt: translation.system_prompt ?? defaults.translations[0].system_prompt,
+            user_prompt: translation.user_prompt ?? defaults.translations[0].user_prompt
+        }));
+
+        // Ensure current indices are valid
+        settings.currentBackend = Math.min(settings.currentBackend, settings.backends.length - 1);
+        settings.currentTranslation = Math.min(settings.currentTranslation, settings.translations.length - 1);
 
         return settings;
     }
-
-    static controller = null;
 
     static async load() {
         try {
@@ -47,7 +62,7 @@ class Settings {
             console.error('Failed to load settings:', error);
             return this.defaultSettings;
         }
-				}
+    }
 
     static async save(settings) {
         try {
@@ -62,19 +77,20 @@ class Settings {
 
     static async getTranslationPrompt(domain, content) {
         const settings = await this.load();
-        const userPrompt = settings.user_prompt
+        const currentTranslation = settings.translations[settings.currentTranslation];
+        const userPrompt = currentTranslation.user_prompt
             .replace('{domain}', domain)
             .replace('{content}', content);
 
         return {
             model: settings.backends[settings.currentBackend].model,
             messages: [
-                { role: 'system', content: settings.system_prompt },
-                { role: 'user', content: userPrompt },
+                { role: 'system', content: currentTranslation.system_prompt },
+                { role: 'user', content: userPrompt }
             ],
             temperature: settings.temperature,
             stream: true,
-            max_tokens: 16384,
+            max_tokens: 16384
         };
     }
 
@@ -106,11 +122,11 @@ class Settings {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${currentBackend.api_key}`,
-                    'HTTP-Referer': 'https://imtass.me', // Optional, for including your app on openrouter.ai rankings.
-                    'X-Title': 'Article Translator', // Optional. Shows in rankings on openrouter.ai.
+                    'HTTP-Referer': 'https://imtass.me',
+                    'X-Title': 'Article Translator'
                 },
                 body: JSON.stringify(prompt),
-                signal: this.controller.signal,
+                signal: this.controller.signal
             });
 
             if (!response.ok) {
