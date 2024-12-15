@@ -124,41 +124,151 @@ async function handleTranslation() {
     );
 }
 
+// Function to populate backend selector
+async function populateBackendSelector() {
+    const settings = await Settings.load();
+    const select = document.getElementById('backendSelect');
+    select.innerHTML = '';
+    
+    settings.backends.forEach((backend, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = backend.name;
+        select.appendChild(option);
+    });
+    
+				select.value = settings.currentBackend;
+}
+
+// Function to update backend settings form
+function updateBackendForm(backend) {
+    document.getElementById('backendName').value = backend.name;
+    document.getElementById('baseUrl').value = backend.base_url;
+    document.getElementById('apiKey').value = backend.api_key;
+    document.getElementById('model').value = backend.model;
+}
+
+// Function to get backend settings from form
+function getBackendFromForm() {
+    return {
+								name: document.getElementById('backendName').value.trim(),
+        base_url: document.getElementById('baseUrl').value.trim(),
+        api_key: document.getElementById('apiKey').value.trim(),
+        model: document.getElementById('model').value.trim(),
+    };
+}
+
 // Function to load settings into form
 async function loadSettingsIntoForm() {
-    const settings = await Settings.load();
-    document.getElementById('baseUrl').value = settings.base_url;
-    document.getElementById('apiKey').value = settings.api_key;
-    document.getElementById('model').value = settings.model;
-    document.getElementById('temperature').value = settings.temperature;
-    document.getElementById('systemPrompt').value = settings.system_prompt;
-    document.getElementById('userPrompt').value = settings.user_prompt;
-    document.getElementById('fontFamily').value = settings.font_family;
-    document.getElementById('fontSize').value = settings.font_size;
-    
-    await applyFontSettings();
+				const settings = await Settings.load();
+				const currentBackend = settings.backends[settings.currentBackend];
+				
+				// Update backend selector and form
+				await populateBackendSelector();
+				updateBackendForm(currentBackend);
+				
+				// Update other settings
+				document.getElementById('temperature').value = settings.temperature;
+				document.getElementById('systemPrompt').value = settings.system_prompt;
+				document.getElementById('userPrompt').value = settings.user_prompt;
+				document.getElementById('fontFamily').value = settings.font_family;
+				document.getElementById('fontSize').value = settings.font_size;
+				
+				await applyFontSettings();
 }
 
 // Function to save settings from form
 async function saveSettingsFromForm() {
-    const settings = {
-        base_url: document.getElementById('baseUrl').value.trim(),
-        api_key: document.getElementById('apiKey').value.trim(),
-        model: document.getElementById('model').value.trim(),
-        temperature: parseFloat(document.getElementById('temperature').value),
-        system_prompt: document.getElementById('systemPrompt').value.trim(),
-        user_prompt: document.getElementById('userPrompt').value.trim(),
-        font_family: document.getElementById('fontFamily').value,
-        font_size: document.getElementById('fontSize').value
-    };
+				try {
+								const settings = await Settings.load();
+								const currentBackendIndex = parseInt(document.getElementById('backendSelect').value);
+								
+								// Validate current backend index
+								if (isNaN(currentBackendIndex) || currentBackendIndex < 0 || currentBackendIndex >= settings.backends.length) {
+												throw new Error('Invalid backend selected');
+								}
+								
+								// Update current backend settings
+								settings.backends[currentBackendIndex] = getBackendFromForm();
+								settings.currentBackend = currentBackendIndex;
+								
+								// Update other settings
+								const temperature = parseFloat(document.getElementById('temperature').value);
+								if (!isNaN(temperature)) {
+												settings.temperature = temperature;
+								}
+								
+								const systemPrompt = document.getElementById('systemPrompt').value.trim();
+								if (systemPrompt) {
+												settings.system_prompt = systemPrompt;
+								}
+								
+								const userPrompt = document.getElementById('userPrompt').value.trim();
+								if (userPrompt) {
+												settings.user_prompt = userPrompt;
+								}
+								
+								const fontFamily = document.getElementById('fontFamily').value;
+								if (fontFamily) {
+												settings.font_family = fontFamily;
+								}
+								
+								const fontSize = document.getElementById('fontSize').value;
+								if (fontSize) {
+												settings.font_size = fontSize;
+								}
 
-    if (await Settings.save(settings)) {
-        showError('Settings saved successfully');
-        await applyFontSettings();
-        toggleSettings(false);
-    } else {
-        showError('Failed to save settings');
-    }
+								if (await Settings.save(settings)) {
+												await populateBackendSelector(); // Refresh backend list
+												showError('Settings saved successfully');
+												await applyFontSettings();
+												toggleSettings(false);
+								} else {
+												throw new Error('Failed to save settings');
+								}
+				} catch (error) {
+								console.error('Save settings error:', error);
+								showError(error.message || 'Failed to save settings');
+				}
+}
+
+// Function to add new backend
+async function addNewBackend() {
+				const settings = await Settings.load();
+				settings.backends.push({
+								name: 'New Backend',
+								base_url: 'https://api.openai.com/v1',
+								api_key: '',
+								model: 'gpt-3.5-turbo',
+				});
+				settings.currentBackend = settings.backends.length - 1;
+				
+				if (await Settings.save(settings)) {
+								await loadSettingsIntoForm();
+								showError('New backend added');
+				} else {
+								showError('Failed to add backend');
+				}
+}
+
+// Function to remove current backend
+async function removeCurrentBackend() {
+				const settings = await Settings.load();
+				if (settings.backends.length <= 1) {
+								showError('Cannot remove last backend');
+								return;
+				}
+				
+				const currentBackendIndex = parseInt(document.getElementById('backendSelect').value);
+				settings.backends.splice(currentBackendIndex, 1);
+				settings.currentBackend = Math.min(currentBackendIndex, settings.backends.length - 1);
+				
+				if (await Settings.save(settings)) {
+								await loadSettingsIntoForm();
+								showError('Backend removed');
+				} else {
+								showError('Failed to remove backend');
+				}
 }
 
 // Function to request content
@@ -249,6 +359,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeSettings').addEventListener('click', () => toggleSettings(false));
     document.getElementById('saveSettings').addEventListener('click', saveSettingsFromForm);
     copyButton.addEventListener('click', handleCopy);
+    
+    // Set up backend management
+    document.getElementById('backendSelect').addEventListener('change', async (e) => {
+        const settings = await Settings.load();
+        const backend = settings.backends[e.target.value];
+        updateBackendForm(backend);
+    });
+    
+    document.getElementById('addBackend').addEventListener('click', addNewBackend);
+    document.getElementById('removeBackend').addEventListener('click', removeCurrentBackend);
     
     // Load initial settings
     await loadSettingsIntoForm();

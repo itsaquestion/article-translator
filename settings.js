@@ -1,30 +1,58 @@
 class Settings {
     static defaultSettings = {
-        base_url: 'https://api.openai.com/v1',
-        api_key: '',
+        currentBackend: 0,
+        backends: [{
+            name: 'Default OpenAI',
+            base_url: 'https://api.openai.com/v1',
+            api_key: '',
+            model: 'gpt-4o-mini',
+        }],
         temperature: 0.7,
-        model: 'gpt-4o-mini',
         system_prompt: 'You are a professional translator. Translate the following markdown content to Chinese, keeping the markdown format intact.',
         user_prompt: 'Translate the following content from {domain}:\n\n{content}',
         font_family: 'system-ui, -apple-system, sans-serif',
-        font_size: '12'
+        font_size: '12',
     };
+
+    static async ensureSettingsValid(settings) {
+        // Ensure all required properties exist with defaults if missing
+        const defaults = this.defaultSettings;
+        settings.currentBackend = settings.currentBackend ?? defaults.currentBackend;
+        settings.backends = settings.backends ?? [...defaults.backends];
+        settings.temperature = settings.temperature ?? defaults.temperature;
+        settings.system_prompt = settings.system_prompt ?? defaults.system_prompt;
+        settings.user_prompt = settings.user_prompt ?? defaults.user_prompt;
+        settings.font_family = settings.font_family ?? defaults.font_family;
+        settings.font_size = settings.font_size ?? defaults.font_size;
+
+        // Ensure each backend has all required fields
+        settings.backends = settings.backends.map(backend => ({
+            name: backend.name ?? 'Unnamed Backend',
+            base_url: backend.base_url ?? defaults.backends[0].base_url,
+            api_key: backend.api_key ?? '',
+            model: backend.model ?? defaults.backends[0].model,
+        }));
+
+        return settings;
+    }
 
     static controller = null;
 
     static async load() {
         try {
             const result = await chrome.storage.local.get('settings');
-            return result.settings || this.defaultSettings;
+            const settings = result.settings || this.defaultSettings;
+            return await this.ensureSettingsValid(settings);
         } catch (error) {
             console.error('Failed to load settings:', error);
             return this.defaultSettings;
         }
-    }
+				}
 
     static async save(settings) {
         try {
-            await chrome.storage.local.set({ settings });
+            const validSettings = await this.ensureSettingsValid(settings);
+            await chrome.storage.local.set({ settings: validSettings });
             return true;
         } catch (error) {
             console.error('Failed to save settings:', error);
@@ -39,14 +67,14 @@ class Settings {
             .replace('{content}', content);
 
         return {
-            model: settings.model,
+            model: settings.backends[settings.currentBackend].model,
             messages: [
                 { role: 'system', content: settings.system_prompt },
-                { role: 'user', content: userPrompt }
+                { role: 'user', content: userPrompt },
             ],
             temperature: settings.temperature,
             stream: true,
-            max_tokens: 16384
+            max_tokens: 16384,
         };
     }
 
@@ -66,21 +94,23 @@ class Settings {
             this.controller = new AbortController();
             
             const settings = await this.load();
-            if (!settings.api_key) {
+            const currentBackend = settings.backends[settings.currentBackend];
+            
+            if (!currentBackend.api_key) {
                 throw new Error('API key not set');
             }
 
             const prompt = await this.getTranslationPrompt(domain, content);
-            const response = await fetch(`${settings.base_url}/chat/completions`, {
+            const response = await fetch(`${currentBackend.base_url}/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${settings.api_key}`,
+                    'Authorization': `Bearer ${currentBackend.api_key}`,
                     'HTTP-Referer': 'https://imtass.me', // Optional, for including your app on openrouter.ai rankings.
-                    'X-Title': 'Article Translator' // Optional. Shows in rankings on openrouter.ai.
+                    'X-Title': 'Article Translator', // Optional. Shows in rankings on openrouter.ai.
                 },
                 body: JSON.stringify(prompt),
-                signal: this.controller.signal
+                signal: this.controller.signal,
             });
 
             if (!response.ok) {
