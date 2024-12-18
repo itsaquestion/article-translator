@@ -90,7 +90,7 @@ class Settings {
             ],
             temperature: settings.temperature,
             stream: true,
-            max_tokens: 16384
+            max_tokens: 8192
         };
     }
 
