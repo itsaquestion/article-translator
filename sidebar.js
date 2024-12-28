@@ -55,6 +55,18 @@ async function applyFontSettings() {
     });
 }
 
+// Function to apply text colors
+async function applyTextColors() {
+    const settings = await Settings.load();
+    const areas = [contentArea, translationArea];
+    areas.forEach(area => {
+        if (area) {
+            area.style.color = settings.text_color;
+            area.style.backgroundColor = settings.background_color;
+        }
+    });
+}
+
 // Function to switch tabs
 function switchTab(tabName) {
     // Update tab buttons
@@ -235,8 +247,11 @@ async function loadSettingsIntoForm() {
     document.getElementById('temperature').value = settings.temperature;
     document.getElementById('fontFamily').value = settings.font_family;
     document.getElementById('fontSize').value = settings.font_size;
+    document.getElementById('textColor').value = settings.text_color;
+    document.getElementById('backgroundColor').value = settings.background_color;
     
     await applyFontSettings();
+    applyTextColors();
 }
 
 // Function to save settings from form
@@ -277,8 +292,19 @@ async function saveSettingsFromForm() {
         if (fontSize) {
             settings.font_size = fontSize;
         }
+        
+        const textColor = document.getElementById('textColor').value;
+        if (textColor) {
+            settings.text_color = textColor;
+        }
+        
+        const backgroundColor = document.getElementById('backgroundColor').value;
+        if (backgroundColor) {
+            settings.background_color = backgroundColor;
+        }
 
         if (await Settings.save(settings)) {
+            applyTextColors();
             await populateBackendSelector(); // Refresh backend list
             await populateTranslationSelectors(); // Refresh translation list
             showError('Settings saved successfully');
@@ -461,6 +487,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('saveSettings').addEventListener('click', saveSettingsFromForm);
     copyButton.addEventListener('click', handleCopy);
     
+    // Set up color pickers
+    document.getElementById('textColor').addEventListener('change', async (e) => {
+        const settings = await Settings.load();
+        settings.text_color = e.target.value;
+        await Settings.save(settings);
+        applyTextColors();
+    });
+    
+    document.getElementById('backgroundColor').addEventListener('change', async (e) => {
+        const settings = await Settings.load();
+        settings.background_color = e.target.value;
+        await Settings.save(settings);
+        applyTextColors();
+    });
+    
     // Set up backend management
     document.getElementById('backendSelect').addEventListener('change', async (e) => {
         const settings = await Settings.load();
@@ -482,6 +523,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('addTranslation').addEventListener('click', addNewTranslation);
     document.getElementById('removeTranslation').addEventListener('click', removeCurrentTranslation);
+    
+    // Initialize text areas
+    contentArea = document.getElementById('contentArea');
+    translationArea = document.getElementById('translationArea');
     
     // Load initial settings
     await loadSettingsIntoForm();

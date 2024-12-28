@@ -15,7 +15,9 @@ class Settings {
         }],
         temperature: 0.7,
         font_family: 'system-ui, -apple-system, sans-serif',
-        font_size: '12'
+        font_size: '12',
+        text_color: '#000000',
+        background_color: '#ffffff'
     };
 
     static controller = null;
@@ -30,6 +32,8 @@ class Settings {
         settings.temperature = settings.temperature ?? defaults.temperature;
         settings.font_family = settings.font_family ?? defaults.font_family;
         settings.font_size = settings.font_size ?? defaults.font_size;
+        settings.text_color = settings.text_color ?? defaults.text_color;
+        settings.background_color = settings.background_color ?? defaults.background_color;
 
         // Ensure each backend has all required fields
         settings.backends = settings.backends.map(backend => ({
