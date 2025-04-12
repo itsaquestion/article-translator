@@ -251,11 +251,24 @@
             transform: translateX(-50%);
             background: rgb(254 242 242);
             color: rgb(185 28 28);
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 12px 24px;
+            border-radius: 6px;
             font-size: 14px;
             z-index: 2000;
-            white-space: nowrap;
+            max-width: 90%;
+            white-space: pre-wrap;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #error.info {
+            background: rgb(239 246 255);
+            color: rgb(29 78 216);
+        }
+
+        #error.warning {
+            background: rgb(254 252 232);
+            color: rgb(161 98 7);
         }
 
         /* Footer toolbar styles */

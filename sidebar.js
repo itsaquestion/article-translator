@@ -12,12 +12,23 @@ let currentUrl = '';
 let isTranslating = false;
 
 // Function to display error messages
-function showError(message) {
-    errorDiv.textContent = message;
+function showError(error) {
+    // Clear previous classes
+    errorDiv.className = 'error';
+    
+    // Set message and type
+    if (typeof error === 'string') {
+        errorDiv.textContent = error;
+    } else {
+        errorDiv.textContent = error.message;
+        errorDiv.classList.add(error.type);
+    }
+    
+    // Set display and timeout
     errorDiv.style.display = 'block';
     setTimeout(() => {
         errorDiv.style.display = 'none';
-    }, 3000);
+    }, error.type === 'info' ? 2000 : 5000);
 }
 
 // Function to clear error messages

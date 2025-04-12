@@ -168,9 +168,24 @@ class Settings {
         } catch (error) {
             this.controller = null;
             if (error.name === 'AbortError') {
-                onError('Translation stopped');
+                onError({type: 'info', message: '翻译已停止'});
+            } else if (error.message.includes('API key not set')) {
+                onError({type: 'error', message: 'API密钥未设置，请前往设置页面配置'});
+            } else if (error.message.includes('API request failed')) {
+                onError({
+                    type: 'error',
+                    message: `API请求失败：${error.message}\n请检查：\n1. API端点是否正确\n2. 网络连接是否正常\n3. API密钥是否有效`
+                });
+            } else if (error.message.includes('Failed to parse')) {
+                onError({
+                    type: 'error',
+                    message: 'API响应解析失败，请检查：\n1. API端点是否兼容OpenAI格式\n2. 模型名称是否正确'
+                });
             } else {
-                onError(error.message);
+                onError({
+                    type: 'error',
+                    message: `发生未知错误：${error.message}\n请检查控制台获取更多信息`
+                });
             }
         }
     }
