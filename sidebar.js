@@ -19,6 +19,7 @@ let chatMessages;
 let chatInput;
 let chatSendBtn;
 let chatStopBtn;
+let clearChatBtn;
 let chatContainer;
 let currentChatMessages = [];
 let isChatting = false;
@@ -76,6 +77,20 @@ function clearAllChatHistory() {
     currentChatUrl = '';
     if (chatMessages) {
         chatMessages.innerHTML = '';
+    }
+}
+
+/**
+ * 处理清除对话按钮点击事件
+ * 显示确认对话框，确认后清除所有对话历史
+ */
+function handleClearChat() {
+    if (confirm('确定要清除全部对话吗？此操作不可撤销。')) {
+        clearAllChatHistory();
+        showError({
+            message: '已清除全部对话',
+            type: 'info'
+        });
     }
 }
 
@@ -834,6 +849,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chatInput = document.getElementById('chatInput');
     chatSendBtn = document.getElementById('chatSendBtn');
     chatStopBtn = document.getElementById('chatStopBtn');
+    clearChatBtn = document.getElementById('clearChatBtn');
     chatContainer = document.querySelector('.chat-container');
     
     // Set up tab switching
@@ -853,6 +869,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set up chat functionality
     chatSendBtn.addEventListener('click', sendChatMessage);
     chatStopBtn.addEventListener('click', stopChatMessage);
+    clearChatBtn.addEventListener('click', handleClearChat);
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
