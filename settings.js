@@ -1,3 +1,7 @@
+// 引入Agent管理类
+// 注意：在实际使用中这些类需要在HTML中通过script标签引入
+// 这里的引用用于代码提示和文档说明
+
 class Settings {
     static defaultSettings = {
         currentBackend: 0,
@@ -7,6 +11,27 @@ class Settings {
             api_key: '',
             model: 'gpt-4o-mini'
         }],
+        // 新的Agent系统配置
+        currentTranslationAgent: 0,
+        translationAgents: [{
+            id: 'default-translation',
+            name: '默认翻译',
+            backendIndex: 0,
+            temperature: 0.3,
+            max_tokens: 8192,
+            system_prompt: 'You are a professional translator. Translate the following markdown content to Chinese, keeping the markdown format intact.',
+            user_prompt: 'Translate the following content from {domain}:\n\n{content}'
+        }],
+        currentChatAgent: 0,
+        chatAgents: [{
+            id: 'default-chat',
+            name: '默认助手',
+            backendIndex: 0,
+            temperature: 0.7,
+            max_tokens: 8192,
+            system_prompt: '你是一位专业的AI助手，专门帮助用户理解和分析文章内容。这篇文章来自 {domain}，请你根据文章的内容与用户进行对话，回答用户关于文章的问题，提供深入的分析和见解。\n\n文章正文如下：\n{content}'
+        }],
+        // 旧版本兼容字段
         currentTranslation: 0,
         translations: [{
             name: 'Default Translation',
@@ -28,6 +53,14 @@ class Settings {
         const defaults = this.defaultSettings;
         settings.currentBackend = settings.currentBackend ?? defaults.currentBackend;
         settings.backends = settings.backends ?? [...defaults.backends];
+        
+        // 新的Agent系统字段
+        settings.currentTranslationAgent = settings.currentTranslationAgent ?? defaults.currentTranslationAgent;
+        settings.translationAgents = settings.translationAgents ?? [...defaults.translationAgents];
+        settings.currentChatAgent = settings.currentChatAgent ?? defaults.currentChatAgent;
+        settings.chatAgents = settings.chatAgents ?? [...defaults.chatAgents];
+        
+        // 旧版本兼容字段
         settings.currentTranslation = settings.currentTranslation ?? defaults.currentTranslation;
         settings.translations = settings.translations ?? [...defaults.translations];
         settings.temperature = settings.temperature ?? defaults.temperature;
@@ -45,7 +78,28 @@ class Settings {
             model: backend.model ?? defaults.backends[0].model
         }));
 
-        // Ensure each translation setting has all required fields
+        // Ensure each translation agent has all required fields
+        settings.translationAgents = settings.translationAgents.map(agent => ({
+            id: agent.id ?? 'agent-' + Date.now(),
+            name: agent.name ?? '未命名翻译Agent',
+            backendIndex: Math.max(0, Math.min(agent.backendIndex ?? 0, settings.backends.length - 1)),
+            temperature: Math.max(0, Math.min(2, agent.temperature ?? 0.3)),
+            max_tokens: Math.max(1, Math.min(32768, agent.max_tokens ?? 8192)),
+            system_prompt: agent.system_prompt ?? defaults.translationAgents[0].system_prompt,
+            user_prompt: agent.user_prompt ?? defaults.translationAgents[0].user_prompt
+        }));
+
+        // Ensure each chat agent has all required fields
+        settings.chatAgents = settings.chatAgents.map(agent => ({
+            id: agent.id ?? 'agent-' + Date.now(),
+            name: agent.name ?? '未命名对话Agent',
+            backendIndex: Math.max(0, Math.min(agent.backendIndex ?? 0, settings.backends.length - 1)),
+            temperature: Math.max(0, Math.min(2, agent.temperature ?? 0.7)),
+            max_tokens: Math.max(1, Math.min(32768, agent.max_tokens ?? 8192)),
+            system_prompt: agent.system_prompt ?? defaults.chatAgents[0].system_prompt
+        }));
+
+        // Ensure each translation setting has all required fields (legacy)
         settings.translations = settings.translations.map(translation => ({
             name: translation.name ?? 'Unnamed Translation',
             system_prompt: translation.system_prompt ?? defaults.translations[0].system_prompt,
@@ -54,6 +108,8 @@ class Settings {
 
         // Ensure current indices are valid
         settings.currentBackend = Math.min(settings.currentBackend, settings.backends.length - 1);
+        settings.currentTranslationAgent = Math.min(settings.currentTranslationAgent, settings.translationAgents.length - 1);
+        settings.currentChatAgent = Math.min(settings.currentChatAgent, settings.chatAgents.length - 1);
         settings.currentTranslation = Math.min(settings.currentTranslation, settings.translations.length - 1);
 
         return settings;
@@ -83,6 +139,17 @@ class Settings {
 
     static async getTranslationPrompt(domain, content) {
         const settings = await this.load();
+        
+        // 优先使用新的翻译Agent系统
+        if (settings.translationAgents && settings.translationAgents.length > 0) {
+            const agent = TranslationAgent.getCurrentAgent(settings);
+            const backend = settings.backends[agent.backendIndex];
+            const request = TranslationAgent.buildTranslationRequest(agent, domain, content);
+            request.model = backend.model;
+            return request;
+        }
+        
+        // 兼容旧的translations配置
         const currentTranslation = settings.translations[settings.currentTranslation];
         const userPrompt = currentTranslation.user_prompt
             .replace('{domain}', domain)
@@ -116,7 +183,15 @@ class Settings {
             this.controller = new AbortController();
             
             const settings = await this.load();
-            const currentBackend = settings.backends[settings.currentBackend];
+            
+            // 获取当前后端配置
+            let currentBackend;
+            if (settings.translationAgents && settings.translationAgents.length > 0) {
+                const agent = TranslationAgent.getCurrentAgent(settings);
+                currentBackend = settings.backends[agent.backendIndex];
+            } else {
+                currentBackend = settings.backends[settings.currentBackend];
+            }
             
             if (!currentBackend.api_key) {
                 throw new Error('API key not set');

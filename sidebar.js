@@ -560,7 +560,13 @@ async function populateBackendSelectorsForAgents() {
 				        option.textContent = backend.name;
 				        chatBackendSelect.appendChild(option);
 				    });
-				    chatBackendSelect.value = settings.currentBackend;
+				    // 设置为当前chat agent的backend，而不是全局的currentBackend
+				    const currentChatAgent = settings.chatAgents[settings.currentChatAgent];
+				    if (currentChatAgent) {
+				        chatBackendSelect.value = currentChatAgent.backendIndex;
+				    } else {
+				        chatBackendSelect.value = settings.currentBackend;
+				    }
 				}
 }
 
@@ -655,20 +661,22 @@ async function loadSettingsIntoForm() {
     await populateTranslationSelectors();
     updateTranslationForm(currentTranslation);
     
-    // Populate backend selectors for translation and chat agents
-    await populateBackendSelectorsForAgents();
-    
     // Update translation agent settings (暂时使用旧的设置结构)
     document.getElementById('translationTemperature').value = settings.temperature || 0.3;
     document.getElementById('translationMaxTokens').value = 8192;
     document.getElementById('translationBackend').value = settings.currentBackend || 0;
     
-    // Update chat agent settings (暂时使用旧的设置结构)
-    document.getElementById('chatTemperature').value = settings.temperature || 0.7;
-    document.getElementById('chatMaxTokens').value = 8192;
-    document.getElementById('chatBackend').value = settings.currentBackend || 0;
-    document.getElementById('chatAgentName').value = '默认助手';
-    document.getElementById('chatSystemPrompt').value = settings.chat_system_prompt;
+    // Populate chat agent selector first
+    await populateChatAgentSelector();
+    
+    // Then populate backend selectors (this will use the current chat agent's backend)
+    await populateBackendSelectorsForAgents();
+    
+    // Finally update chat agent form
+    const currentChatAgent = settings.chatAgents[settings.currentChatAgent];
+    if (currentChatAgent) {
+        updateChatAgentForm(currentChatAgent);
+    }
     
     // Update appearance settings
     document.getElementById('fontFamily').value = settings.font_family;
@@ -709,10 +717,18 @@ async function saveSettingsFromForm() {
             settings.temperature = translationTemperature;
         }
         
-        // Update chat settings from chat tab
-        const chatSystemPrompt = document.getElementById('chatSystemPrompt').value;
-        if (chatSystemPrompt) {
-            settings.chat_system_prompt = chatSystemPrompt;
+        // Update chat agent settings from chat tab
+        const currentChatAgentIndex = parseInt(document.getElementById('chatAgentSelect').value);
+        if (!isNaN(currentChatAgentIndex) && currentChatAgentIndex >= 0 && currentChatAgentIndex < settings.chatAgents.length) {
+            const chatAgentData = getChatAgentFromForm();
+            settings.chatAgents[currentChatAgentIndex] = ChatAgent.validateAndFixAgent({
+                ...settings.chatAgents[currentChatAgentIndex],
+                ...chatAgentData
+            }, settings.backends);
+            settings.currentChatAgent = currentChatAgentIndex;
+            
+            // Update compatibility field
+            settings.chat_system_prompt = chatAgentData.system_prompt;
         }
         
         // Update appearance settings from appearance tab
@@ -741,7 +757,15 @@ async function saveSettingsFromForm() {
             await populateBackendSelector(); // Refresh backend list
             await populateTranslationSelectors(); // Refresh translation list
             await populateBackendSelectorsForAgents(); // Refresh agent backend selectors
-            showError('Settings saved successfully');
+            await populateChatAgentSelector(); // Refresh chat agent selector
+            
+            // 重新加载当前chat agent的表单数据，确保backend显示正确
+            const currentChatAgent = settings.chatAgents[settings.currentChatAgent];
+            if (currentChatAgent) {
+                updateChatAgentForm(currentChatAgent);
+            }
+            
+            showError({type: 'info', message: '设置保存成功'});
             await applyFontSettings();
             toggleSettings(false);
         } else {
@@ -829,6 +853,113 @@ async function removeCurrentTranslation() {
         showError('Translation removed');
     } else {
         showError('Failed to remove translation');
+    }
+}
+
+// Function to populate chat agent selector
+async function populateChatAgentSelector() {
+    const settings = await Settings.load();
+    const chatAgentSelect = document.getElementById('chatAgentSelect');
+    
+    if (!chatAgentSelect) return;
+    
+    // 确保有对话Agent
+    ChatAgent.initializeDefaultAgents(settings);
+    
+    chatAgentSelect.innerHTML = '';
+    settings.chatAgents.forEach((agent, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = agent.name;
+        if (index === settings.currentChatAgent) {
+            option.selected = true;
+        }
+        chatAgentSelect.appendChild(option);
+    });
+}
+
+// Function to update chat agent form
+function updateChatAgentForm(agent) {
+    document.getElementById('chatAgentName').value = agent.name;
+    document.getElementById('chatBackend').value = agent.backendIndex;
+    document.getElementById('chatTemperature').value = agent.temperature;
+    document.getElementById('chatMaxTokens').value = agent.max_tokens;
+    document.getElementById('chatSystemPrompt').value = agent.system_prompt;
+}
+
+// Function to get chat agent from form
+function getChatAgentFromForm() {
+    return {
+        name: document.getElementById('chatAgentName').value.trim(),
+        backendIndex: parseInt(document.getElementById('chatBackend').value),
+        temperature: parseFloat(document.getElementById('chatTemperature').value),
+        max_tokens: parseInt(document.getElementById('chatMaxTokens').value),
+        system_prompt: document.getElementById('chatSystemPrompt').value.trim()
+    };
+}
+
+// Function to sync chat agent selection
+async function syncChatAgentSelection(index) {
+    const settings = await Settings.load();
+    settings.currentChatAgent = parseInt(index);
+    
+    // Update chat agent select
+    document.getElementById('chatAgentSelect').value = index;
+    
+    // Update chat agent form
+    const agent = settings.chatAgents[index];
+    updateChatAgentForm(agent);
+    
+    // 确保backend选择器显示正确的值
+    const chatBackendSelect = document.getElementById('chatBackend');
+    if (chatBackendSelect && agent) {
+        chatBackendSelect.value = agent.backendIndex;
+    }
+    
+    // Save settings
+    await Settings.save(settings);
+}
+
+// Function to add new chat agent
+async function addNewChatAgent() {
+    const settings = await Settings.load();
+    const newAgent = ChatAgent.createAgent('新对话Agent', settings.currentBackend || 0);
+    
+    settings.chatAgents.push(newAgent);
+    settings.currentChatAgent = settings.chatAgents.length - 1;
+    
+    if (await Settings.save(settings)) {
+        await populateChatAgentSelector();
+        await populateBackendSelectorsForAgents();
+        updateChatAgentForm(newAgent);
+        showError({type: 'info', message: '新对话Agent已添加'});
+    } else {
+        showError('添加对话Agent失败');
+    }
+}
+
+// Function to remove current chat agent
+async function removeCurrentChatAgent() {
+    const settings = await Settings.load();
+    if (settings.chatAgents.length <= 1) {
+        showError('无法删除最后一个对话Agent');
+        return;
+    }
+    
+    const currentAgentIndex = parseInt(document.getElementById('chatAgentSelect').value);
+    settings.chatAgents.splice(currentAgentIndex, 1);
+    settings.currentChatAgent = Math.min(currentAgentIndex, settings.chatAgents.length - 1);
+    
+    if (await Settings.save(settings)) {
+        await populateChatAgentSelector();
+        await populateBackendSelectorsForAgents();
+        const currentAgent = settings.chatAgents[settings.currentChatAgent];
+        if (currentAgent) {
+            updateChatAgentForm(currentAgent);
+        }
+        showError({type: 'info', message: '对话Agent已删除'});
+    } else {
+        showError('删除对话Agent失败');
     }
 }
 
@@ -1103,33 +1234,54 @@ async function callChatAPI(userMessage) {
         chatController = new AbortController();
         
         const settings = await Settings.load();
-        const currentBackend = settings.backends[settings.currentBackend];
         
-        if (!currentBackend.api_key) {
-            throw new Error('API密钥未设置，请前往设置页面配置');
+        // 优先使用新的ChatAgent系统
+        let requestBody;
+        let currentBackend;
+        
+        if (settings.chatAgents && settings.chatAgents.length > 0) {
+            const agent = ChatAgent.getCurrentAgent(settings);
+            currentBackend = settings.backends[agent.backendIndex];
+            
+            if (!currentBackend.api_key) {
+                throw new Error('API密钥未设置，请前往设置页面配置');
+            }
+            
+            // 使用ChatAgent构建请求
+            const domain = currentUrl ? new URL(currentUrl).hostname : '';
+            const content = currentContent || '';
+            requestBody = ChatAgent.buildChatRequest(agent, currentChatMessages, domain, content);
+            requestBody.model = currentBackend.model;
+        } else {
+            // 兼容旧的chat_system_prompt配置
+            currentBackend = settings.backends[settings.currentBackend];
+            
+            if (!currentBackend.api_key) {
+                throw new Error('API密钥未设置，请前往设置页面配置');
+            }
+            
+            // Prepare system prompt with content and domain
+            let systemPrompt = settings.chat_system_prompt;
+            if (currentContent && currentUrl) {
+                systemPrompt = systemPrompt
+                    .replace('{domain}', new URL(currentUrl).hostname)
+                    .replace('{content}', currentContent);
+            }
+            
+            // Prepare messages
+            const messages = [
+                { role: 'system', content: systemPrompt },
+                ...currentChatMessages
+            ];
+            
+            requestBody = {
+                model: currentBackend.model,
+                messages: messages,
+                temperature: settings.temperature,
+                stream: true,
+                max_tokens: 8192
+            };
         }
-        
-        // Prepare system prompt with content and domain
-        let systemPrompt = settings.chat_system_prompt;
-        if (currentContent && currentUrl) {
-            systemPrompt = systemPrompt
-                .replace('{domain}', new URL(currentUrl).hostname)
-                .replace('{content}', currentContent);
-        }
-        
-        // Prepare messages
-        const messages = [
-            { role: 'system', content: systemPrompt },
-            ...currentChatMessages
-        ];
-        
-        const requestBody = {
-            model: currentBackend.model,
-            messages: messages,
-            temperature: settings.temperature,
-            stream: true,
-            max_tokens: 8192
-        };
         
         const response = await fetch(`${currentBackend.base_url}/chat/completions`, {
             method: 'POST',
@@ -1470,6 +1622,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('addTranslation').addEventListener('click', addNewTranslation);
     document.getElementById('removeTranslation').addEventListener('click', removeCurrentTranslation);
+    
+    // Set up chat agent management
+    document.getElementById('chatAgentSelect').addEventListener('change', async (e) => {
+        await syncChatAgentSelection(e.target.value);
+    });
+    
+    document.getElementById('addChatAgent').addEventListener('click', addNewChatAgent);
+    document.getElementById('removeChatAgent').addEventListener('click', removeCurrentChatAgent);
     
     // Initialize text areas
     contentArea = document.getElementById('contentArea');
