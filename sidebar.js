@@ -492,7 +492,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function displayChatMessage(content, isUser = false) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${isUser ? 'user' : 'ai'}`;
-    messageDiv.textContent = content;
+    
+    // For AI messages, render markdown; for user messages, use plain text
+    if (!isUser && typeof marked !== 'undefined') {
+        messageDiv.innerHTML = marked.parse(content);
+    } else {
+        messageDiv.textContent = content;
+    }
+    
     chatMessages.appendChild(messageDiv);
     
     // Scroll to bottom
@@ -608,7 +615,12 @@ async function callChatAPI(userMessage) {
                         const content = parsed.choices[0]?.delta?.content;
                         if (content) {
                             aiResponse += content;
-                            aiMessageDiv.textContent = aiResponse;
+                            // Render markdown for AI responses during streaming
+                            if (typeof marked !== 'undefined') {
+                                aiMessageDiv.innerHTML = marked.parse(aiResponse);
+                            } else {
+                                aiMessageDiv.textContent = aiResponse;
+                            }
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         }
                     } catch (e) {

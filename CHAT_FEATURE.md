@@ -129,6 +129,65 @@ function updateContent(content, url) {
 - **错误处理**: 复用现有的错误处理机制，保持一致性
 - **流式响应**: 支持实时显示AI回复，提升用户体验
 
+## Markdown渲染功能
+
+### 功能概述
+Chat UI现在支持markdown渲染，能够美观地显示AI回复中的格式化内容，包括：
+
+- **标题**：H1-H6各级标题
+- **列表**：有序列表和无序列表
+- **代码**：行内代码和代码块
+- **强调**：粗体和斜体文本
+- **引用**：块引用
+- **表格**：完整的表格支持
+- **链接**：可点击的链接
+- **分隔线**：水平分隔线
+
+### 技术实现
+
+#### 消息显示逻辑
+```javascript
+function displayChatMessage(content, isUser = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${isUser ? 'user' : 'ai'}`;
+    
+    // 只对AI消息进行markdown渲染，用户消息保持纯文本
+    if (!isUser && typeof marked !== 'undefined') {
+        messageDiv.innerHTML = marked.parse(content);
+    } else {
+        messageDiv.textContent = content;
+    }
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+```
+
+#### 流式响应渲染
+在流式响应过程中，AI消息会实时渲染markdown：
+```javascript
+// 流式更新时实时渲染markdown
+if (typeof marked !== 'undefined') {
+    aiMessageDiv.innerHTML = marked.parse(aiResponse);
+} else {
+    aiMessageDiv.textContent = aiResponse;
+}
+```
+
+#### CSS样式优化
+为chat消息中的markdown元素添加了专门的样式：
+- 标题使用合适的字体大小和间距
+- 代码块具有背景色和语法高亮样式
+- 表格具有边框和对齐
+- 引用块具有左边框装饰
+- 用户消息和AI消息的markdown元素颜色适配
+
+### 使用场景
+- **代码解释**：AI可以返回格式化的代码示例
+- **结构化回答**：使用标题、列表组织答案
+- **表格数据**：以表格形式呈现对比数据
+- **文档引用**：包含格式化的引用内容
+
 ## 特性说明
 
 ### 当前支持的功能
@@ -138,11 +197,11 @@ function updateContent(content, url) {
 ✅ 可配置的系统提示词
 ✅ 简洁的消息界面
 ✅ Enter键快捷发送
+✅ Markdown渲染（AI回复支持）
 
 ### 暂不支持的功能
 ❌ 对话历史保存
 ❌ 消息编辑/删除
-❌ Markdown渲染
 ❌ 时间戳显示
 ❌ Token统计
 ❌ 清空对话功能
@@ -162,3 +221,16 @@ function updateContent(content, url) {
 - Token使用统计
 - 导入/导出对话
 - 多对话会话管理
+- 代码块语法高亮
+- LaTeX数学公式渲染
+- 图片和文件上传支持
+- 消息搜索功能
+
+## 更新日志
+
+### v1.1.0 - Markdown渲染支持
+- ✅ 添加AI回复的markdown渲染功能
+- ✅ 支持标题、列表、代码块、表格等markdown元素
+- ✅ 优化chat消息的CSS样式
+- ✅ 保持用户消息为纯文本显示
+- ✅ 流式响应过程中实时渲染markdown
