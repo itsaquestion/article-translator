@@ -25,6 +25,10 @@ let currentChatMessages = [];
 let isChatting = false;
 let chatController = null;
 
+// 当前正在生成的AI回复相关变量
+let currentAiResponse = '';
+let currentAiMessageId = '';
+
 // 基于网址的聊天内容存储 (内存中，浏览器关闭后消失)
 let chatHistoryByUrl = new Map();
 
@@ -105,14 +109,14 @@ function rerenderChatMessages() {
 }
 
 /**
- * 删除指定消息及其后续所有消息
+ * 删除指定消息（仅删除单条消息）
  * @param {string} messageId - 消息ID
  */
-function deleteMessageAndAfter(messageId) {
+function deleteMessage(messageId) {
     const messageIndex = currentChatMessages.findIndex(msg => msg.id === messageId);
     if (messageIndex !== -1) {
-        // 删除数据
-        currentChatMessages = currentChatMessages.slice(0, messageIndex);
+        // 删除单条消息
+        currentChatMessages.splice(messageIndex, 1);
         // 更新UI
         rerenderChatMessages();
         // 保存历史
@@ -121,10 +125,143 @@ function deleteMessageAndAfter(messageId) {
         }
         
         showError({
-            message: '已删除该消息及后续对话',
+            message: '已删除该消息',
             type: 'info'
         });
     }
+}
+
+/**
+ * 编辑消息
+ * @param {string} messageId - 消息ID
+ */
+function editMessage(messageId) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageElement) {
+        showError('未找到指定消息');
+        return;
+    }
+    
+    const contentElement = messageElement.querySelector('.message-content');
+    const actionsElement = messageElement.querySelector('.message-actions');
+    const messageData = currentChatMessages.find(msg => msg.id === messageId);
+    
+    if (!messageData) {
+        showError('未找到消息数据');
+        return;
+    }
+    
+    // 保存原始内容
+    const originalContent = messageData.content;
+    
+    // 创建编辑界面
+    const isUser = messageData.role === 'user';
+    contentElement.innerHTML = `
+        <div class="edit-container">
+            <textarea class="edit-textarea" style="
+                width: 100%;
+                min-height: 80px;
+                padding: 8px;
+                border: 1px solid rgb(59, 130, 246);
+                border-radius: 4px;
+                font-family: inherit;
+                font-size: inherit;
+                resize: vertical;
+                box-sizing: border-box;
+            ">${originalContent}</textarea>
+            <div class="edit-actions" style="
+                display: flex;
+                gap: 8px;
+                margin-top: 8px;
+                justify-content: flex-end;
+            ">
+                <button class="save-edit-btn" style="
+                    padding: 4px 12px;
+                    background: rgb(34, 197, 94);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                ">保存</button>
+                <button class="cancel-edit-btn" style="
+                    padding: 4px 12px;
+                    background: rgb(156, 163, 175);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                ">取消</button>
+            </div>
+        </div>
+    `;
+    
+    // 隐藏操作按钮
+    actionsElement.style.display = 'none';
+    
+    // 聚焦到文本框
+    const textarea = contentElement.querySelector('.edit-textarea');
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    
+    // 保存按钮事件
+    const saveBtn = contentElement.querySelector('.save-edit-btn');
+    saveBtn.addEventListener('click', () => {
+        const newContent = textarea.value.trim();
+        if (newContent && newContent !== originalContent) {
+            // 更新消息数据
+            messageData.content = newContent;
+            messageData.timestamp = Date.now(); // 更新时间戳
+            
+            // 恢复显示
+            if (!isUser && typeof marked !== 'undefined') {
+                contentElement.innerHTML = marked.parse(newContent);
+            } else {
+                contentElement.textContent = newContent;
+            }
+            
+            // 显示操作按钮
+            actionsElement.style.display = 'flex';
+            
+            // 保存历史
+            if (currentChatUrl) {
+                saveChatHistoryForUrl(currentChatUrl);
+            }
+            
+            showError({
+                message: '消息已更新',
+                type: 'info'
+            });
+        } else {
+            // 取消编辑
+            cancelEdit();
+        }
+    });
+    
+    // 取消按钮事件
+    const cancelBtn = contentElement.querySelector('.cancel-edit-btn');
+    cancelBtn.addEventListener('click', cancelEdit);
+    
+    // 取消编辑函数
+    function cancelEdit() {
+        // 恢复原始内容
+        if (!isUser && typeof marked !== 'undefined') {
+            contentElement.innerHTML = marked.parse(originalContent);
+        } else {
+            contentElement.textContent = originalContent;
+        }
+        
+        // 显示操作按钮
+        actionsElement.style.display = 'flex';
+    }
+    
+    // ESC键取消编辑
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            cancelEdit();
+        }
+    });
 }
 
 /**
@@ -193,14 +330,10 @@ function handleMessageAction(event) {
             regenerateMessage(messageId);
             break;
         case 'delete':
-            deleteMessageAndAfter(messageId);
+            deleteMessage(messageId);
             break;
         case 'edit':
-            // TODO: 实现编辑功能
-            showError({
-                message: '编辑功能即将推出',
-                type: 'info'
-            });
+            editMessage(messageId);
             break;
         default:
             console.warn('未知的操作类型:', action);
@@ -839,6 +972,20 @@ function stopChatMessage() {
         isChatting = false;
         updateChatSendButton(false);
         
+        // 保存被中断的AI回复（如果有内容）
+        if (currentAiResponse && currentAiMessageId) {
+            currentChatMessages.push({
+                id: currentAiMessageId,
+                role: 'assistant',
+                content: currentAiResponse,
+                timestamp: Date.now()
+            });
+            
+            // 清空当前回复变量
+            currentAiResponse = '';
+            currentAiMessageId = '';
+        }
+        
         // 保存当前聊天历史到锁定的URL（包括被中断的对话）
         if (currentChatUrl) {
             saveChatHistoryForUrl(currentChatUrl);
@@ -942,10 +1089,10 @@ async function callChatAPI(userMessage) {
         const decoder = new TextDecoder();
         
         // Create AI message element with ID
-        const aiMessageId = generateMessageId();
+        currentAiMessageId = generateMessageId();
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = 'chat-message ai';
-        aiMessageDiv.setAttribute('data-message-id', aiMessageId);
+        aiMessageDiv.setAttribute('data-message-id', currentAiMessageId);
         aiMessageDiv.style.position = 'relative';
         
         // 创建消息内容容器
@@ -953,7 +1100,7 @@ async function callChatAPI(userMessage) {
         aiContentDiv.className = 'message-content';
         
         // 创建操作按钮
-        const aiActionsDiv = createMessageActions(false, aiMessageId);
+        const aiActionsDiv = createMessageActions(false, currentAiMessageId);
         
         aiMessageDiv.appendChild(aiContentDiv);
         aiMessageDiv.appendChild(aiActionsDiv);
@@ -962,7 +1109,7 @@ async function callChatAPI(userMessage) {
         // 更新最后一条AI消息的样式
         updateLastAiMessageClass();
         
-        let aiResponse = '';
+        currentAiResponse = '';
         
         while (true) {
             const { done, value } = await reader.read();
@@ -980,12 +1127,12 @@ async function callChatAPI(userMessage) {
                         const parsed = JSON.parse(data);
                         const content = parsed.choices[0]?.delta?.content;
                         if (content) {
-                            aiResponse += content;
+                            currentAiResponse += content;
                             // Render markdown for AI responses during streaming
                             if (typeof marked !== 'undefined') {
-                                aiContentDiv.innerHTML = marked.parse(aiResponse);
+                                aiContentDiv.innerHTML = marked.parse(currentAiResponse);
                             } else {
-                                aiContentDiv.textContent = aiResponse;
+                                aiContentDiv.textContent = currentAiResponse;
                             }
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         }
@@ -997,11 +1144,11 @@ async function callChatAPI(userMessage) {
         }
         
         // Add AI response to chat history
-        if (aiResponse) {
+        if (currentAiResponse) {
             currentChatMessages.push({
-                id: aiMessageId,
+                id: currentAiMessageId,
                 role: 'assistant',
-                content: aiResponse,
+                content: currentAiResponse,
                 timestamp: Date.now()
             });
             
@@ -1014,14 +1161,18 @@ async function callChatAPI(userMessage) {
         chatController = null;
         isChatting = false;
         updateChatSendButton(false);
+        
+        // 清空当前回复变量
+        currentAiResponse = '';
+        currentAiMessageId = '';
         
     } catch (error) {
         // 即使是中断错误，也要保存已经生成的部分响应
-        if (aiResponse && error.name === 'AbortError') {
+        if (currentAiResponse && error.name === 'AbortError') {
             currentChatMessages.push({
-                id: aiMessageId,
+                id: currentAiMessageId,
                 role: 'assistant',
-                content: aiResponse,
+                content: currentAiResponse,
                 timestamp: Date.now()
             });
             
@@ -1034,6 +1185,10 @@ async function callChatAPI(userMessage) {
         chatController = null;
         isChatting = false;
         updateChatSendButton(false);
+        
+        // 清空当前回复变量
+        currentAiResponse = '';
+        currentAiMessageId = '';
         
         if (error.name === 'AbortError') {
             showError({type: 'info', message: '聊天已停止'});
@@ -1081,17 +1236,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add CSS styles for message actions
     const style = document.createElement('style');
     style.textContent = `
+        .chat-message {
+            margin-bottom: 16px; /* 增加消息间距，为按钮留出空间 */
+        }
+        
         .message-actions {
             display: none;
             position: absolute;
-            top: 4px;
-            right: 8px;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 6px;
             padding: 4px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             z-index: 10;
             gap: 2px;
+        }
+        
+        /* AI消息按钮：对话框右侧，与底部对齐 */
+        .chat-message.ai .message-actions {
+            right: -60px;
+            bottom: 0;
+        }
+        
+        /* 用户消息按钮：对话框右侧下方，与右侧对齐 */
+        .chat-message.user .message-actions {
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
         }
         
         .chat-message:hover .message-actions,
@@ -1110,6 +1280,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             display: flex;
             align-items: center;
             justify-content: center;
+            min-width: 24px;
+            min-height: 24px;
         }
         
         .action-btn:hover {
@@ -1134,8 +1306,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             color: rgb(239, 68, 68);
         }
         
-        .message-content {
-            padding-right: 40px; /* 为按钮留出空间 */
+        /* 确保聊天容器有足够的右边距 */
+        .chat-messages {
+            padding-right: 70px; /* 为AI消息按钮预留空间 */
         }
     `;
     document.head.appendChild(style);
