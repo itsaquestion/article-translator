@@ -82,6 +82,15 @@ function updateContent(markdown) {
     currentContent = markdown;
     contentArea.value = markdown;
     renderMarkdown();
+    
+    // Clear chat history when content changes
+    if (currentChatMessages.length > 0) {
+        currentChatMessages = [];
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+            displayChatMessage('文章内容已更新，对话历史已清空。现在可以基于新的文章内容开始对话。', false);
+        }
+    }
 }
 
 // Function to apply font settings
@@ -121,6 +130,11 @@ function switchTab(tabName) {
     });
 
     currentTab = tabName;
+    
+    // If switching to chat tab and no content available, show a hint
+    if (tabName === 'chat' && !currentContent) {
+        displayChatMessage('请先点击"提取原文"按钮获取页面内容，然后就可以基于文章内容进行对话了。', false);
+    }
 }
 
 // Function to toggle settings panel
@@ -529,9 +543,17 @@ async function callChatAPI(userMessage) {
             throw new Error('API密钥未设置，请前往设置页面配置');
         }
         
+        // Prepare system prompt with content and domain
+        let systemPrompt = settings.chat_system_prompt;
+        if (currentContent && currentUrl) {
+            systemPrompt = systemPrompt
+                .replace('{domain}', new URL(currentUrl).hostname)
+                .replace('{content}', currentContent);
+        }
+        
         // Prepare messages
         const messages = [
-            { role: 'system', content: settings.chat_system_prompt },
+            { role: 'system', content: systemPrompt },
             ...currentChatMessages
         ];
         

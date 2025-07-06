@@ -561,7 +561,10 @@
             <div class="settings-section-title">Chat Settings</div>
             <div class="form-group">
                 <label for="chatSystemPrompt">Chat System Prompt:</label>
-                <textarea id="chatSystemPrompt" placeholder="你是一位有用的AI助手"></textarea>
+                <textarea id="chatSystemPrompt" placeholder="你是一位专业的AI助手，专门帮助用户理解和分析文章内容。这篇文章来自 {domain}，请你根据文章的内容与用户进行对话..."></textarea>
+                <small style="color: rgb(100 116 139); font-size: 12px; margin-top: 4px; display: block;">
+                    可用变量: {domain} - 文章域名, {content} - 文章正文
+                </small>
             </div>
         </div>
 

@@ -14,7 +14,7 @@ class Settings {
             user_prompt: 'Translate the following content from {domain}:\n\n{content}'
         }],
         temperature: 0.7,
-        chat_system_prompt: '你是一位有用的AI助手',
+        chat_system_prompt: '你是一位专业的AI助手，专门帮助用户理解和分析文章内容。这篇文章来自 {domain}，请你根据文章的内容与用户进行对话，回答用户关于文章的问题，提供深入的分析和见解。\n\n文章正文如下：\n{content}',
         font_family: 'system-ui, -apple-system, sans-serif',
         font_size: '12',
         text_color: '#000000',
