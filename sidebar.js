@@ -56,7 +56,7 @@ function restoreChatHistoryForUrl(url) {
         if (chatMessages) {
             chatMessages.innerHTML = '';
             currentChatMessages.forEach(message => {
-                displayChatMessage(message.content, message.role === 'user');
+                displayChatMessage(message.content, message.role === 'user', message.id);
             });
         }
     } else {
@@ -90,6 +90,121 @@ function handleClearChat() {
         message: '已清除全部对话',
         type: 'info'
     });
+}
+
+/**
+ * 重新渲染所有聊天消息
+ */
+function rerenderChatMessages() {
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+        currentChatMessages.forEach(message => {
+            displayChatMessage(message.content, message.role === 'user', message.id);
+        });
+    }
+}
+
+/**
+ * 删除指定消息及其后续所有消息
+ * @param {string} messageId - 消息ID
+ */
+function deleteMessageAndAfter(messageId) {
+    const messageIndex = currentChatMessages.findIndex(msg => msg.id === messageId);
+    if (messageIndex !== -1) {
+        // 删除数据
+        currentChatMessages = currentChatMessages.slice(0, messageIndex);
+        // 更新UI
+        rerenderChatMessages();
+        // 保存历史
+        if (currentChatUrl) {
+            saveChatHistoryForUrl(currentChatUrl);
+        }
+        
+        showError({
+            message: '已删除该消息及后续对话',
+            type: 'info'
+        });
+    }
+}
+
+/**
+ * 重新生成AI回复
+ * @param {string} messageId - AI消息ID
+ */
+async function regenerateMessage(messageId) {
+    if (isChatting) {
+        showError('正在对话中，请稍后再试');
+        return;
+    }
+    
+    const messageIndex = currentChatMessages.findIndex(msg => msg.id === messageId);
+    if (messageIndex === -1) {
+        showError('未找到指定消息');
+        return;
+    }
+    
+    // 确保这是一条AI消息
+    const targetMessage = currentChatMessages[messageIndex];
+    if (targetMessage.role !== 'assistant') {
+        showError('只能重新生成AI回复');
+        return;
+    }
+    
+    // 删除该AI消息及后续所有消息
+    currentChatMessages = currentChatMessages.slice(0, messageIndex);
+    rerenderChatMessages();
+    
+    // 获取上一条用户消息
+    const lastUserMessageIndex = currentChatMessages.length - 1;
+    if (lastUserMessageIndex >= 0 && currentChatMessages[lastUserMessageIndex].role === 'user') {
+        const lastUserMessage = currentChatMessages[lastUserMessageIndex].content;
+        
+        // 设置生成状态
+        isChatting = true;
+        updateChatSendButton(true);
+        
+        try {
+            await callChatAPI(lastUserMessage);
+        } catch (error) {
+            showError(`重新生成失败: ${error.message}`);
+            isChatting = false;
+            updateChatSendButton(false);
+        }
+    } else {
+        showError('未找到对应的用户消息');
+    }
+}
+
+/**
+ * 处理消息操作按钮点击事件
+ * @param {Event} event - 点击事件
+ */
+function handleMessageAction(event) {
+    const button = event.target.closest('.action-btn');
+    if (!button) return;
+    
+    const messageId = button.getAttribute('data-message-id');
+    const action = button.getAttribute('data-action');
+    
+    if (!messageId || !action) return;
+    
+    switch (action) {
+        case 'regenerate':
+            regenerateMessage(messageId);
+            break;
+        case 'delete':
+            deleteMessageAndAfter(messageId);
+            break;
+        case 'edit':
+            // TODO: 实现编辑功能
+            showError({
+                message: '编辑功能即将推出',
+                type: 'info'
+            });
+            break;
+        default:
+            console.warn('未知的操作类型:', action);
+    }
 }
 
 // Function to display error messages
@@ -565,21 +680,125 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Chat Functions
-function displayChatMessage(content, isUser = false) {
+/**
+ * 生成唯一的消息ID
+ * @returns {string} 唯一的消息ID
+ */
+function generateMessageId() {
+    return 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * 创建消息操作按钮
+ * @param {boolean} isUser - 是否为用户消息
+ * @param {string} messageId - 消息ID
+ * @returns {HTMLElement} 操作按钮容器
+ */
+function createMessageActions(isUser, messageId) {
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'message-actions';
+    
+    if (isUser) {
+        // 用户消息：编辑、删除
+        actionsDiv.innerHTML = `
+            <button class="action-btn edit-btn" title="编辑" data-message-id="${messageId}" data-action="edit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+            </button>
+            <button class="action-btn delete-btn" title="删除" data-message-id="${messageId}" data-action="delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m3 6 3 0"/>
+                    <path d="m21 6-3 0"/>
+                    <path d="m8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <rect width="18" height="16" x="3" y="6" rx="2"/>
+                    <path d="m10 11 0 6"/>
+                    <path d="m14 11 0 6"/>
+                </svg>
+            </button>
+        `;
+    } else {
+        // AI消息：重新生成、编辑、删除
+        actionsDiv.innerHTML = `
+            <button class="action-btn regenerate-btn" title="重新生成" data-message-id="${messageId}" data-action="regenerate">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M3 21v-5h5"/>
+                </svg>
+            </button>
+            <button class="action-btn edit-btn" title="编辑" data-message-id="${messageId}" data-action="edit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+            </button>
+            <button class="action-btn delete-btn" title="删除" data-message-id="${messageId}" data-action="delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m3 6 3 0"/>
+                    <path d="m21 6-3 0"/>
+                    <path d="m8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <rect width="18" height="16" x="3" y="6" rx="2"/>
+                    <path d="m10 11 0 6"/>
+                    <path d="m14 11 0 6"/>
+                </svg>
+            </button>
+        `;
+    }
+    
+    return actionsDiv;
+}
+
+/**
+ * 更新最后一条AI消息的样式类
+ */
+function updateLastAiMessageClass() {
+    // 移除所有消息的 last-ai 类
+    document.querySelectorAll('.chat-message.ai').forEach(msg => {
+        msg.classList.remove('last-ai');
+    });
+    
+    // 为最后一条AI消息添加 last-ai 类
+    const aiMessages = document.querySelectorAll('.chat-message.ai');
+    if (aiMessages.length > 0) {
+        aiMessages[aiMessages.length - 1].classList.add('last-ai');
+    }
+}
+
+function displayChatMessage(content, isUser = false, messageId = null) {
+    const id = messageId || generateMessageId();
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${isUser ? 'user' : 'ai'}`;
+    messageDiv.setAttribute('data-message-id', id);
+    messageDiv.style.position = 'relative'; // 为绝对定位的按钮提供参考
+    
+    // 消息内容容器
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
     
     // For AI messages, render markdown; for user messages, use plain text
     if (!isUser && typeof marked !== 'undefined') {
-        messageDiv.innerHTML = marked.parse(content);
+        contentDiv.innerHTML = marked.parse(content);
     } else {
-        messageDiv.textContent = content;
+        contentDiv.textContent = content;
     }
     
+    // 创建操作按钮
+    const actionsDiv = createMessageActions(isUser, id);
+    
+    messageDiv.appendChild(contentDiv);
+    messageDiv.appendChild(actionsDiv);
     chatMessages.appendChild(messageDiv);
+    
+    // 更新最后一条AI消息的样式
+    updateLastAiMessageClass();
     
     // Scroll to bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return id;
 }
 
 function updateChatSendButton(isSending) {
@@ -633,9 +852,14 @@ async function sendChatMessage() {
     const userMessage = chatInput.value.trim();
     if (!userMessage || isChatting) return;
     
-    // Display user message
-    displayChatMessage(userMessage, true);
-    currentChatMessages.push({ role: 'user', content: userMessage });
+    // Display user message and get message ID
+    const messageId = displayChatMessage(userMessage, true);
+    currentChatMessages.push({
+        id: messageId,
+        role: 'user',
+        content: userMessage,
+        timestamp: Date.now()
+    });
     
     // 更新placeholder（对话开始后显示普通提示）
     updateChatPlaceholder();
@@ -717,10 +941,26 @@ async function callChatAPI(userMessage) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         
-        // Create AI message element
+        // Create AI message element with ID
+        const aiMessageId = generateMessageId();
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = 'chat-message ai';
+        aiMessageDiv.setAttribute('data-message-id', aiMessageId);
+        aiMessageDiv.style.position = 'relative';
+        
+        // 创建消息内容容器
+        const aiContentDiv = document.createElement('div');
+        aiContentDiv.className = 'message-content';
+        
+        // 创建操作按钮
+        const aiActionsDiv = createMessageActions(false, aiMessageId);
+        
+        aiMessageDiv.appendChild(aiContentDiv);
+        aiMessageDiv.appendChild(aiActionsDiv);
         chatMessages.appendChild(aiMessageDiv);
+        
+        // 更新最后一条AI消息的样式
+        updateLastAiMessageClass();
         
         let aiResponse = '';
         
@@ -743,9 +983,9 @@ async function callChatAPI(userMessage) {
                             aiResponse += content;
                             // Render markdown for AI responses during streaming
                             if (typeof marked !== 'undefined') {
-                                aiMessageDiv.innerHTML = marked.parse(aiResponse);
+                                aiContentDiv.innerHTML = marked.parse(aiResponse);
                             } else {
-                                aiMessageDiv.textContent = aiResponse;
+                                aiContentDiv.textContent = aiResponse;
                             }
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         }
@@ -758,7 +998,12 @@ async function callChatAPI(userMessage) {
         
         // Add AI response to chat history
         if (aiResponse) {
-            currentChatMessages.push({ role: 'assistant', content: aiResponse });
+            currentChatMessages.push({
+                id: aiMessageId,
+                role: 'assistant',
+                content: aiResponse,
+                timestamp: Date.now()
+            });
             
             // 保存聊天历史到锁定的URL
             if (currentChatUrl) {
@@ -773,7 +1018,12 @@ async function callChatAPI(userMessage) {
     } catch (error) {
         // 即使是中断错误，也要保存已经生成的部分响应
         if (aiResponse && error.name === 'AbortError') {
-            currentChatMessages.push({ role: 'assistant', content: aiResponse });
+            currentChatMessages.push({
+                id: aiMessageId,
+                role: 'assistant',
+                content: aiResponse,
+                timestamp: Date.now()
+            });
             
             // 保存聊天历史到锁定的URL
             if (currentChatUrl) {
@@ -828,6 +1078,68 @@ async function handleCopy() {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
+    // Add CSS styles for message actions
+    const style = document.createElement('style');
+    style.textContent = `
+        .message-actions {
+            display: none;
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 6px;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+            gap: 2px;
+        }
+        
+        .chat-message:hover .message-actions,
+        .chat-message.last-ai .message-actions {
+            display: flex;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 4px;
+            color: rgb(100, 116, 139);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .action-btn:hover {
+            background: rgb(241, 245, 249);
+            color: rgb(51, 65, 85);
+        }
+        
+        .action-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+        
+        .regenerate-btn:hover {
+            color: rgb(34, 197, 94);
+        }
+        
+        .edit-btn:hover {
+            color: rgb(59, 130, 246);
+        }
+        
+        .delete-btn:hover {
+            color: rgb(239, 68, 68);
+        }
+        
+        .message-content {
+            padding-right: 40px; /* 为按钮留出空间 */
+        }
+    `;
+    document.head.appendChild(style);
+    
     // Initialize UI elements
     refreshButton = document.getElementById('refreshButton');
     translateButton = document.getElementById('translateButton');
@@ -874,6 +1186,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             sendChatMessage();
         }
     });
+    
+    // Set up message action event delegation
+    chatMessages.addEventListener('click', handleMessageAction);
     
     // Set up color pickers
     document.getElementById('textColor').addEventListener('change', async (e) => {
