@@ -409,6 +409,27 @@
             cursor: not-allowed;
         }
 
+        .chat-stop-btn {
+            padding: 8px 16px;
+            background: rgb(220 38 38);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            margin-left: 8px;
+        }
+
+        .chat-stop-btn:hover {
+            background: rgb(185 28 28);
+        }
+
+        .chat-stop-btn:disabled {
+            background: rgb(156 163 175);
+            cursor: not-allowed;
+        }
+
         /* Markdown styles for chat messages */
         .chat-message h1,
         .chat-message h2,
@@ -598,6 +619,7 @@
                 <div class="chat-input-area">
                     <textarea id="chatInput" class="chat-input" placeholder="输入您的消息..." rows="3"></textarea>
                     <button id="chatSendBtn" class="chat-send-btn">发送</button>
+                    <button id="chatStopBtn" class="chat-stop-btn" style="display: none;">停止</button>
                 </div>
             </div>
         </div>

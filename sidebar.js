@@ -18,6 +18,7 @@ let isTranslating = false;
 let chatMessages;
 let chatInput;
 let chatSendBtn;
+let chatStopBtn;
 let chatContainer;
 let currentChatMessages = [];
 let isChatting = false;
@@ -139,11 +140,8 @@ function updateContent(markdown) {
     contentArea.value = markdown;
     renderMarkdown();
     
-    // 注意：聊天历史恢复已在requestContent()中处理，这里不需要重复恢复
-    // 只在聊天为空且没有历史时显示欢迎信息
-    if (currentChatMessages.length === 0 && chatMessages && chatMessages.children.length === 0) {
-        displayChatMessage('文章内容已加载。现在可以基于文章内容开始对话。', false);
-    }
+    // 更新chat输入框的placeholder提示
+    updateChatPlaceholder();
 }
 
 // Function to apply font settings
@@ -184,9 +182,9 @@ function switchTab(tabName) {
 
     currentTab = tabName;
     
-    // If switching to chat tab and no content available, show a hint
-    if (tabName === 'chat' && !currentContent) {
-        displayChatMessage('请先点击"提取原文"按钮获取页面内容，然后就可以基于文章内容进行对话了。', false);
+    // If switching to chat tab, update placeholder
+    if (tabName === 'chat') {
+        updateChatPlaceholder();
     }
 }
 
@@ -574,6 +572,48 @@ function displayChatMessage(content, isUser = false) {
 function updateChatSendButton(isSending) {
     chatSendBtn.disabled = isSending;
     chatSendBtn.textContent = isSending ? '发送中...' : '发送';
+    
+    // 控制停止按钮的显示/隐藏
+    if (chatStopBtn) {
+        chatStopBtn.style.display = isSending ? 'inline-block' : 'none';
+    }
+}
+
+/**
+ * 更新聊天输入框的placeholder提示
+ */
+function updateChatPlaceholder() {
+    if (chatInput) {
+        if (currentContent && currentChatMessages.length === 0) {
+            // 有文章内容且没有对话历史时，显示基于文章的提示
+            chatInput.placeholder = "基于文章内容开始对话...";
+        } else if (currentChatMessages.length > 0) {
+            // 已经开始对话后，显示普通提示
+            chatInput.placeholder = "输入您的消息...";
+        } else {
+            // 没有文章内容时，提示先提取文章
+            chatInput.placeholder = "请先提取文章内容后开始对话...";
+        }
+    }
+}
+
+/**
+ * 停止当前聊天请求
+ */
+function stopChatMessage() {
+    if (chatController && isChatting) {
+        chatController.abort();
+        chatController = null;
+        isChatting = false;
+        updateChatSendButton(false);
+        
+        // 保存当前聊天历史到锁定的URL（包括被中断的对话）
+        if (currentChatUrl) {
+            saveChatHistoryForUrl(currentChatUrl);
+        }
+        
+        showError({type: 'info', message: '聊天已停止'});
+    }
 }
 
 async function sendChatMessage() {
@@ -583,6 +623,9 @@ async function sendChatMessage() {
     // Display user message
     displayChatMessage(userMessage, true);
     currentChatMessages.push({ role: 'user', content: userMessage });
+    
+    // 更新placeholder（对话开始后显示普通提示）
+    updateChatPlaceholder();
     
     // 保存当前聊天历史到锁定的URL
     if (currentChatUrl) {
@@ -715,6 +758,16 @@ async function callChatAPI(userMessage) {
         updateChatSendButton(false);
         
     } catch (error) {
+        // 即使是中断错误，也要保存已经生成的部分响应
+        if (aiResponse && error.name === 'AbortError') {
+            currentChatMessages.push({ role: 'assistant', content: aiResponse });
+            
+            // 保存聊天历史到锁定的URL
+            if (currentChatUrl) {
+                saveChatHistoryForUrl(currentChatUrl);
+            }
+        }
+        
         chatController = null;
         isChatting = false;
         updateChatSendButton(false);
@@ -780,6 +833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chatMessages = document.getElementById('chatMessages');
     chatInput = document.getElementById('chatInput');
     chatSendBtn = document.getElementById('chatSendBtn');
+    chatStopBtn = document.getElementById('chatStopBtn');
     chatContainer = document.querySelector('.chat-container');
     
     // Set up tab switching
@@ -798,6 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Set up chat functionality
     chatSendBtn.addEventListener('click', sendChatMessage);
+    chatStopBtn.addEventListener('click', stopChatMessage);
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -851,6 +906,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Start URL monitoring for automatic tab switching
     startUrlMonitoring();
+    
+    // Initialize chat placeholder
+    updateChatPlaceholder();
     
     // Initial content request
     requestContent();
