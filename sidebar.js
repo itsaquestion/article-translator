@@ -23,6 +23,61 @@ let currentChatMessages = [];
 let isChatting = false;
 let chatController = null;
 
+// 基于网址的聊天内容存储 (内存中，浏览器关闭后消失)
+let chatHistoryByUrl = new Map();
+
+// 当前对话会话所属的URL (在对话开始时锁定，避免切换tab时的混乱)
+let currentChatUrl = '';
+
+/**
+ * 保存当前聊天历史到指定URL
+ * @param {string} url - 网址
+ */
+function saveChatHistoryForUrl(url) {
+    if (url && currentChatMessages.length > 0) {
+        chatHistoryByUrl.set(url, [...currentChatMessages]);
+    }
+}
+
+/**
+ * 从指定URL恢复聊天历史
+ * @param {string} url - 网址
+ */
+function restoreChatHistoryForUrl(url) {
+    // 设置当前聊天会话的URL
+    currentChatUrl = url || '';
+    
+    if (url && chatHistoryByUrl.has(url)) {
+        currentChatMessages = [...chatHistoryByUrl.get(url)];
+        
+        // 重新渲染聊天界面
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+            currentChatMessages.forEach(message => {
+                displayChatMessage(message.content, message.role === 'user');
+            });
+        }
+    } else {
+        // 如果没有该URL的聊天历史，清空当前聊天
+        currentChatMessages = [];
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
+    }
+}
+
+/**
+ * 清空所有聊天历史 (用于调试或重置)
+ */
+function clearAllChatHistory() {
+    chatHistoryByUrl.clear();
+    currentChatMessages = [];
+    currentChatUrl = '';
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+}
+
 // Function to display error messages
 function showError(error) {
     // Clear previous classes
@@ -79,17 +134,15 @@ function renderMarkdown() {
 
 // Function to update the content
 function updateContent(markdown) {
+    // 更新原文内容
     currentContent = markdown;
     contentArea.value = markdown;
     renderMarkdown();
     
-    // Clear chat history when content changes
-    if (currentChatMessages.length > 0) {
-        currentChatMessages = [];
-        if (chatMessages) {
-            chatMessages.innerHTML = '';
-            displayChatMessage('文章内容已更新，对话历史已清空。现在可以基于新的文章内容开始对话。', false);
-        }
+    // 注意：聊天历史恢复已在requestContent()中处理，这里不需要重复恢复
+    // 只在聊天为空且没有历史时显示欢迎信息
+    if (currentChatMessages.length === 0 && chatMessages && chatMessages.children.length === 0) {
+        displayChatMessage('文章内容已加载。现在可以基于文章内容开始对话。', false);
     }
 }
 
@@ -467,8 +520,20 @@ function requestContent() {
     showLoading();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
+            // 保存当前聊天会话的历史（如果URL发生变化）
+            const newUrl = tabs[0].url;
+            if (currentChatUrl && currentUrl !== newUrl) {
+                saveChatHistoryForUrl(currentChatUrl);
+            }
+            
+            // 更新当前URL
+            currentUrl = newUrl;
+            
+            // 立即恢复新URL的聊天历史
+            restoreChatHistoryForUrl(currentUrl);
+            
+            // 发送消息获取页面内容
             chrome.tabs.sendMessage(tabs[0].id, { action: 'getHTML' });
-            currentUrl = tabs[0].url;
         }
     });
 }
@@ -518,6 +583,11 @@ async function sendChatMessage() {
     // Display user message
     displayChatMessage(userMessage, true);
     currentChatMessages.push({ role: 'user', content: userMessage });
+    
+    // 保存当前聊天历史到锁定的URL
+    if (currentChatUrl) {
+        saveChatHistoryForUrl(currentChatUrl);
+    }
     
     // Clear input and update UI
     chatInput.value = '';
@@ -633,6 +703,11 @@ async function callChatAPI(userMessage) {
         // Add AI response to chat history
         if (aiResponse) {
             currentChatMessages.push({ role: 'assistant', content: aiResponse });
+            
+            // 保存聊天历史到锁定的URL
+            if (currentChatUrl) {
+                saveChatHistoryForUrl(currentChatUrl);
+            }
         }
         
         chatController = null;
@@ -774,6 +849,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load initial settings
     await loadSettingsIntoForm();
     
+    // Start URL monitoring for automatic tab switching
+    startUrlMonitoring();
+    
     // Initial content request
     requestContent();
 });
@@ -781,6 +859,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Request when sidebar becomes visible
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-        requestContent();
+        // 当侧边栏重新可见时，立即检查URL变化
+        setTimeout(() => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0] && tabs[0].url !== currentUrl) {
+                    handleTabChange();
+                }
+            });
+        }, 100);
     }
 });
+
+// 处理标签页变化的函数
+function handleTabChange() {
+    // 直接调用requestContent来处理所有逻辑
+    requestContent();
+}
+
+// 定时检查URL变化的函数
+function startUrlMonitoring() {
+    setInterval(() => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0] && tabs[0].url !== currentUrl) {
+                // URL发生变化，触发内容更新
+                handleTabChange();
+            }
+        });
+    }, 1000); // 每秒检查一次
+}

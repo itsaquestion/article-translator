@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作流测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-step {
+            background: #f0f8ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #007bff;
+            border-radius: 0 5px 5px 0;
+        }
+        .expected {
+            background: #f0fff0;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+            border-radius: 0 3px 3px 0;
+        }
+        .navigation {
+            background: #fff3cd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .navigation a {
+            display: inline-block;
+            margin-right: 15px;
+            padding: 8px 15px;
+            background: #ffc107;
+            color: #212529;
+            text-decoration: none;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .navigation a:hover {
+            background: #e0a800;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chrome插件聊天历史功能测试工作流</h1>
+    
+    <div class="navigation">
+        <h3>测试页面导航</h3>
+        <a href="test-chat-history.html">页面A (AI发展)</a>
+        <a href="test-chat-history-b.html">页面B (机器学习)</a>
+        <a href="test-chat-history-c.html">页面C (深度学习)</a>
+    </div>
+    
+    <h2>完整测试流程</h2>
+    
+    <div class="test-step">
+        <h3>步骤1：初始化测试</h3>
+        <p>1. 打开Chrome插件侧边栏</p>
+        <p>2. 在当前页面点击"提取原文"按钮</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>"原文"tab显示当前页面内容</li>
+                <li>"译文"tab保持空白或之前的内容</li>
+                <li>"对话"tab显示欢迎信息</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-step">
+        <h3>步骤2：在页面A进行对话</h3>
+        <p>1. 切换到"对话"tab</p>
+        <p>2. 发送消息："这个页面讲的是什么内容？"</p>
+        <p>3. 等待AI回复</p>
+        <p>4. 再发送一条消息："能详细解释一下吗？"</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>AI能正确回答关于当前页面的问题</li>
+                <li>聊天记录正常显示</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-step">
+        <h3>步骤3：切换到页面B</h3>
+        <p>1. 点击导航链接跳转到"页面B (机器学习)"</p>
+        <p>2. 观察插件界面变化</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>自动提取新页面正文，更新"原文"tab</li>
+                <li>"译文"tab内容不变</li>
+                <li>"对话"tab显示欢迎信息（因为这是新URL）</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-step">
+        <h3>步骤4：在页面B进行对话</h3>
+        <p>1. 在"对话"tab发送消息："这个页面的主题是什么？"</p>
+        <p>2. 发送另一条消息："机器学习有哪些类型？"</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>AI能正确识别机器学习主题</li>
+                <li>回答与页面B的内容相关</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-step">
+        <h3>步骤5：返回页面A验证历史</h3>
+        <p>1. 点击导航链接返回"页面A (AI发展)"</p>
+        <p>2. 检查"对话"tab</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>自动恢复页面A之前的聊天记录</li>
+                <li>能看到之前关于AI发展的对话</li>
+                <li>"原文"tab更新为页面A内容</li>
+                <li>"译文"tab内容保持不变</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-step">
+        <h3>步骤6：继续页面A的对话</h3>
+        <p>1. 在恢复的对话基础上发送新消息："AI的未来发展趋势是什么？"</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>AI能基于之前的对话上下文回答</li>
+                <li>新消息添加到现有对话历史中</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-step">
+        <h3>步骤7：测试手动刷新</h3>
+        <p>1. 在页面A点击插件的"刷新"按钮</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>重新提取页面A的正文</li>
+                <li>聊天历史保持不变（因为URL没变）</li>
+                <li>"译文"tab内容不变</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-step">
+        <h3>步骤8：测试新标签页</h3>
+        <p>1. 新建标签页，访问页面C</p>
+        <p>2. 在页面C进行对话</p>
+        <p>3. 切换回页面A的标签页</p>
+        <div class="expected">
+            <strong>预期结果：</strong>
+            <ul>
+                <li>页面C显示新的聊天界面</li>
+                <li>切换回页面A时恢复之前的聊天记录</li>
+                <li>每个标签页都有独立的聊天历史</li>
+            </ul>
+        </div>
+    </div>
+    
+    <h2>核心验证点</h2>
+    <ul>
+        <li>✅ 每个URL都有独立的聊天历史</li>
+        <li>✅ 页面切换时自动保存当前聊天</li>
+        <li>✅ 页面切换时自动恢复目标页面聊天</li>
+        <li>✅ 自动提取新页面正文</li>
+        <li>✅ 译文内容在页面切换时不被清除</li>
+        <li>✅ 手动刷新按钮功能正常</li>
+        <li>✅ 多标签页场景正常工作</li>
+    </ul>
+    
+    <h2>当前页面测试内容</h2>
+    <p>这个页面专门用于测试Chrome插件的聊天历史功能。内容包含了完整的测试流程说明。</p>
+    
+    <h3>测试主题：工作流验证</h3>
+    <p>通过系统性的测试步骤，验证聊天历史功能在各种场景下的表现，包括：</p>
+    <ul>
+        <li>同一标签页内的URL变化</li>
+        <li>标签页之间的切换</li>
+        <li>新标签页的创建和访问</li>
+        <li>手动刷新操作</li>
+    </ul>
+    
+    <p>这些测试覆盖了用户在实际使用中可能遇到的所有场景。</p>
+</body>
+</html>
