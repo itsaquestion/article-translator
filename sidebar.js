@@ -449,6 +449,19 @@ function switchTab(tabName) {
     }
 }
 
+// Function to switch settings tabs
+function switchSettingsTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.settings-tab-button').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.settingsTab === tabName);
+    });
+
+    // Update tab contents
+    document.querySelectorAll('.settings-tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `${tabName}-settings-tab`);
+    });
+}
+
 // Function to toggle settings panel
 function toggleSettings(show) {
     settingsPanel.classList.toggle('active', show);
@@ -519,6 +532,36 @@ async function populateBackendSelector() {
     });
     
 				select.value = settings.currentBackend;
+}
+
+// Function to populate backend selectors for agents
+async function populateBackendSelectorsForAgents() {
+				const settings = await Settings.load();
+				const translationBackendSelect = document.getElementById('translationBackend');
+				const chatBackendSelect = document.getElementById('chatBackend');
+				
+				// Clear existing options
+				if (translationBackendSelect) {
+				    translationBackendSelect.innerHTML = '';
+				    settings.backends.forEach((backend, index) => {
+				        const option = document.createElement('option');
+				        option.value = index;
+				        option.textContent = backend.name;
+				        translationBackendSelect.appendChild(option);
+				    });
+				    translationBackendSelect.value = settings.currentBackend;
+				}
+				
+				if (chatBackendSelect) {
+				    chatBackendSelect.innerHTML = '';
+				    settings.backends.forEach((backend, index) => {
+				        const option = document.createElement('option');
+				        option.value = index;
+				        option.textContent = backend.name;
+				        chatBackendSelect.appendChild(option);
+				    });
+				    chatBackendSelect.value = settings.currentBackend;
+				}
 }
 
 // Function to populate translation selectors
@@ -612,9 +655,22 @@ async function loadSettingsIntoForm() {
     await populateTranslationSelectors();
     updateTranslationForm(currentTranslation);
     
-    // Update other settings
-    document.getElementById('temperature').value = settings.temperature;
+    // Populate backend selectors for translation and chat agents
+    await populateBackendSelectorsForAgents();
+    
+    // Update translation agent settings (暂时使用旧的设置结构)
+    document.getElementById('translationTemperature').value = settings.temperature || 0.3;
+    document.getElementById('translationMaxTokens').value = 8192;
+    document.getElementById('translationBackend').value = settings.currentBackend || 0;
+    
+    // Update chat agent settings (暂时使用旧的设置结构)
+    document.getElementById('chatTemperature').value = settings.temperature || 0.7;
+    document.getElementById('chatMaxTokens').value = 8192;
+    document.getElementById('chatBackend').value = settings.currentBackend || 0;
+    document.getElementById('chatAgentName').value = '默认助手';
     document.getElementById('chatSystemPrompt').value = settings.chat_system_prompt;
+    
+    // Update appearance settings
     document.getElementById('fontFamily').value = settings.font_family;
     document.getElementById('fontSize').value = settings.font_size;
     document.getElementById('textColor').value = settings.text_color;
@@ -647,17 +703,19 @@ async function saveSettingsFromForm() {
         settings.translations[currentTranslationIndex] = getTranslationFromForm();
         settings.currentTranslation = currentTranslationIndex;
         
-        // Update other settings
-        const temperature = parseFloat(document.getElementById('temperature').value);
-        if (!isNaN(temperature)) {
-            settings.temperature = temperature;
+        // Update translation settings from translation tab
+        const translationTemperature = parseFloat(document.getElementById('translationTemperature').value);
+        if (!isNaN(translationTemperature)) {
+            settings.temperature = translationTemperature;
         }
         
+        // Update chat settings from chat tab
         const chatSystemPrompt = document.getElementById('chatSystemPrompt').value;
         if (chatSystemPrompt) {
             settings.chat_system_prompt = chatSystemPrompt;
         }
         
+        // Update appearance settings from appearance tab
         const fontFamily = document.getElementById('fontFamily').value;
         if (fontFamily) {
             settings.font_family = fontFamily;
@@ -682,6 +740,7 @@ async function saveSettingsFromForm() {
             applyTextColors();
             await populateBackendSelector(); // Refresh backend list
             await populateTranslationSelectors(); // Refresh translation list
+            await populateBackendSelectorsForAgents(); // Refresh agent backend selectors
             showError('Settings saved successfully');
             await applyFontSettings();
             toggleSettings(false);
@@ -1347,6 +1406,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
+    // Set up settings tab switching
+    document.querySelectorAll('.settings-tab-button').forEach(tab => {
+        tab.addEventListener('click', () => switchSettingsTab(tab.dataset.settingsTab));
+    });
+
     // Set up buttons
     refreshButton.addEventListener('click', requestContent);
     translateButton.addEventListener('click', handleTranslation);
@@ -1413,6 +1477,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Load initial settings
     await loadSettingsIntoForm();
+    
+    // Initialize settings tab (show first tab by default)
+    switchSettingsTab('backend');
     
     // Start URL monitoring for automatic tab switching
     startUrlMonitoring();

@@ -651,6 +651,61 @@
             right: -8px;
             left: auto;
         }
+
+        /* 设置标签页样式 */
+        .settings-tabs {
+            display: flex;
+            border-bottom: 1px solid rgb(226 232 240);
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+
+        .settings-tab-button {
+            padding: 8px 16px;
+            font-size: 14px;
+            color: rgb(71 85 105);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            min-width: fit-content;
+        }
+
+        .settings-tab-button:hover {
+            color: rgb(51 65 85);
+            background: rgb(248 250 252);
+        }
+
+        .settings-tab-button.active {
+            color: rgb(59 130 246);
+            border-bottom-color: rgb(59 130 246);
+            background: rgb(248 250 252);
+        }
+
+        .settings-tab-content {
+            display: none;
+            width: 100%;
+        }
+
+        .settings-tab-content.active {
+            display: block;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .settings-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .settings-tab-button {
+                flex: 1;
+                min-width: 0;
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -740,114 +795,178 @@
             </button>
         </div>
 
-        <div class="settings-section">
-            <div class="settings-section-title">LLM Settings</div>
-            <div class="form-group">
-                <label for="backendSelect">Current Backend:</label>
-                <select id="backendSelect"></select>
-            </div>
-            <div id="backendSettings">
+        <!-- 设置标签页导航 -->
+        <div class="settings-tabs">
+            <button class="settings-tab-button active" data-settings-tab="backend">LLM Backend</button>
+            <button class="settings-tab-button" data-settings-tab="translation">翻译设置</button>
+            <button class="settings-tab-button" data-settings-tab="chat">对话设置</button>
+            <button class="settings-tab-button" data-settings-tab="appearance">外观设置</button>
+        </div>
+
+        <!-- Backend设置标签页 -->
+        <div id="backend-settings-tab" class="settings-tab-content active">
+            <div class="settings-section">
+                <div class="settings-section-title">LLM Backend管理</div>
                 <div class="form-group">
-                    <label for="backendName">Backend Name:</label>
-                    <input type="text" id="backendName" placeholder="My OpenAI Backend">
+                    <label for="backendSelect">当前Backend:</label>
+                    <select id="backendSelect"></select>
                 </div>
-                <div class="form-group">
-                    <label for="baseUrl">Base URL:</label>
-                    <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1">
+                <div id="backendSettings">
+                    <div class="form-group">
+                        <label for="backendName">Backend名称:</label>
+                        <input type="text" id="backendName" placeholder="My OpenAI Backend">
+                    </div>
+                    <div class="form-group">
+                        <label for="baseUrl">Base URL:</label>
+                        <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="form-group">
+                        <label for="apiKey">API Key:</label>
+                        <input type="password" id="apiKey">
+                    </div>
+                    <div class="form-group">
+                        <label for="model">模型名称:</label>
+                        <input type="text" id="model" placeholder="gpt-3.5-turbo">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey">
+                <div class="backend-actions" style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button id="addBackend" class="icon-button" style="flex: 1; background: rgb(51 65 85); color: white; padding: 4px 8px;">
+                        添加Backend
+                    </button>
+                    <button id="removeBackend" class="icon-button" style="flex: 1; background: rgb(239 68 68); color: white; padding: 4px 8px;">
+                        删除Backend
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="model">Model Name:</label>
-                    <input type="text" id="model" placeholder="gpt-3.5-turbo">
+                <div class="form-group" style="margin-top: 16px;">
+                    <label for="defaultBackend">设为默认Backend:</label>
+                    <button id="setDefaultBackend" class="icon-button" style="background: rgb(34 197 94); color: white; padding: 4px 8px;">
+                        设为默认
+                    </button>
                 </div>
-            </div>
-            <div class="backend-actions" style="display: flex; gap: 8px; margin-top: 12px;">
-                <button id="addBackend" class="icon-button" style="flex: 1; background: rgb(51 65 85); color: white; padding: 4px 8px;">
-                    Add New Backend
-                </button>
-                <button id="removeBackend" class="icon-button" style="flex: 1; background: rgb(239 68 68); color: white; padding: 4px 8px;">
-                    Remove Current Backend
-                </button>
-            </div>
-            <div class="form-group" style="margin-top: 16px;">
-                <label for="temperature">Temperature:</label>
-                <input type="number" id="temperature" min="0" max="2" step="0.1">
             </div>
         </div>
 
-        <div class="settings-section">
-            <div class="settings-section-title">Translation Settings</div>
-            <div class="form-group">
-                <label for="translationSelect">Current Translation:</label>
-                <select id="translationSelect"></select>
-            </div>
-            <div id="translationSettings">
+        <!-- 翻译设置标签页 -->
+        <div id="translation-settings-tab" class="settings-tab-content">
+            <div class="settings-section">
+                <div class="settings-section-title">翻译Agent管理</div>
                 <div class="form-group">
-                    <label for="translationName">Translation Name:</label>
-                    <input type="text" id="translationName" placeholder="My Translation Setting">
+                    <label for="translationSelect">当前翻译Agent:</label>
+                    <select id="translationSelect"></select>
                 </div>
-                <div class="form-group">
-                    <label for="systemPrompt">System Prompt:</label>
-                    <textarea id="systemPrompt"></textarea>
+                <div id="translationSettings">
+                    <div class="form-group">
+                        <label for="translationName">Agent名称:</label>
+                        <input type="text" id="translationName" placeholder="我的翻译设置">
+                    </div>
+                    <div class="form-group">
+                        <label for="translationBackend">选择Backend:</label>
+                        <select id="translationBackend"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="translationTemperature">Temperature:</label>
+                        <input type="number" id="translationTemperature" min="0" max="2" step="0.1" value="0.3">
+                    </div>
+                    <div class="form-group">
+                        <label for="translationMaxTokens">Max Tokens:</label>
+                        <input type="number" id="translationMaxTokens" min="1" max="32768" step="1" value="8192">
+                    </div>
+                    <div class="form-group">
+                        <label for="systemPrompt">System Prompt:</label>
+                        <textarea id="systemPrompt"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="userPrompt">User Prompt:</label>
+                        <textarea id="userPrompt"></textarea>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="userPrompt">User Prompt:</label>
-                    <textarea id="userPrompt"></textarea>
+                <div class="translation-actions" style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button id="addTranslation" class="icon-button" style="flex: 1; background: rgb(51 65 85); color: white; padding: 4px 8px;">
+                        添加翻译Agent
+                    </button>
+                    <button id="removeTranslation" class="icon-button" style="flex: 1; background: rgb(239 68 68); color: white; padding: 4px 8px;">
+                        删除翻译Agent
+                    </button>
                 </div>
-            </div>
-            <div class="translation-actions" style="display: flex; gap: 8px; margin-top: 12px;">
-                <button id="addTranslation" class="icon-button" style="flex: 1; background: rgb(51 65 85); color: white; padding: 4px 8px;">
-                    Add New Translation
-                </button>
-                <button id="removeTranslation" class="icon-button" style="flex: 1; background: rgb(239 68 68); color: white; padding: 4px 8px;">
-                    Remove Current Translation
-                </button>
             </div>
         </div>
 
-        <div class="settings-section">
-            <div class="settings-section-title">Chat Settings</div>
-            <div class="form-group">
-                <label for="chatSystemPrompt">Chat System Prompt:</label>
-                <textarea id="chatSystemPrompt" placeholder="你是一位专业的AI助手，专门帮助用户理解和分析文章内容。这篇文章来自 {domain}，请你根据文章的内容与用户进行对话..."></textarea>
-                <small style="color: rgb(100 116 139); font-size: 12px; margin-top: 4px; display: block;">
-                    可用变量: {domain} - 文章域名, {content} - 文章正文
-                </small>
+        <!-- 对话设置标签页 -->
+        <div id="chat-settings-tab" class="settings-tab-content">
+            <div class="settings-section">
+                <div class="settings-section-title">对话Agent管理</div>
+                <div class="form-group">
+                    <label for="chatAgentSelect">当前对话Agent:</label>
+                    <select id="chatAgentSelect"></select>
+                </div>
+                <div id="chatAgentSettings">
+                    <div class="form-group">
+                        <label for="chatAgentName">Agent名称:</label>
+                        <input type="text" id="chatAgentName" placeholder="我的对话助手">
+                    </div>
+                    <div class="form-group">
+                        <label for="chatBackend">选择Backend:</label>
+                        <select id="chatBackend"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="chatTemperature">Temperature:</label>
+                        <input type="number" id="chatTemperature" min="0" max="2" step="0.1" value="0.7">
+                    </div>
+                    <div class="form-group">
+                        <label for="chatMaxTokens">Max Tokens:</label>
+                        <input type="number" id="chatMaxTokens" min="1" max="32768" step="1" value="8192">
+                    </div>
+                    <div class="form-group">
+                        <label for="chatSystemPrompt">System Prompt:</label>
+                        <textarea id="chatSystemPrompt" placeholder="你是一位专业的AI助手，专门帮助用户理解和分析文章内容。这篇文章来自 {domain}，请你根据文章的内容与用户进行对话..."></textarea>
+                        <small style="color: rgb(100 116 139); font-size: 12px; margin-top: 4px; display: block;">
+                            可用变量: {domain} - 文章域名, {content} - 文章正文
+                        </small>
+                    </div>
+                </div>
+                <div class="chat-agent-actions" style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button id="addChatAgent" class="icon-button" style="flex: 1; background: rgb(51 65 85); color: white; padding: 4px 8px;">
+                        添加对话Agent
+                    </button>
+                    <button id="removeChatAgent" class="icon-button" style="flex: 1; background: rgb(239 68 68); color: white; padding: 4px 8px;">
+                        删除对话Agent
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="settings-section">
-            <div class="settings-section-title">Text Appearance</div>
-            <div class="form-group">
-                <label for="fontFamily">Font Family:</label>
-                <select id="fontFamily">
-                    <option value="system-ui, -apple-system, sans-serif">System Default</option>
-                    <option value="monospace">Monospace</option>
-                    <option value="Arial, sans-serif">Arial</option>
-                    <option value="Times New Roman, serif">Times New Roman</option>
-                    <option value="Microsoft YaHei, sans-serif">Microsoft YaHei</option>
-                    <option value="SimSun, serif">SimSun</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="fontSize">Font Size (px):</label>
-                <input type="number" id="fontSize" min="8" max="24" step="1" value="14">
-            </div>
-            <div class="form-group">
-                <label for="textColor">Text Color:</label>
-                <input type="color" id="textColor">
-            </div>
-            <div class="form-group">
-                <label for="backgroundColor">Background Color:</label>
-                <input type="color" id="backgroundColor">
+        <!-- 外观设置标签页 -->
+        <div id="appearance-settings-tab" class="settings-tab-content">
+            <div class="settings-section">
+                <div class="settings-section-title">文本外观</div>
+                <div class="form-group">
+                    <label for="fontFamily">字体:</label>
+                    <select id="fontFamily">
+                        <option value="system-ui, -apple-system, sans-serif">系统默认</option>
+                        <option value="monospace">等宽字体</option>
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="Times New Roman, serif">Times New Roman</option>
+                        <option value="Microsoft YaHei, sans-serif">微软雅黑</option>
+                        <option value="SimSun, serif">宋体</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fontSize">字体大小 (px):</label>
+                    <input type="number" id="fontSize" min="8" max="24" step="1" value="14">
+                </div>
+                <div class="form-group">
+                    <label for="textColor">文字颜色:</label>
+                    <input type="color" id="textColor">
+                </div>
+                <div class="form-group">
+                    <label for="backgroundColor">背景颜色:</label>
+                    <input type="color" id="backgroundColor">
+                </div>
             </div>
         </div>
 
         <button id="saveSettings" class="icon-button" style="width: 100%; margin-top: 16px; background: rgb(51 65 85); color: white; padding: 8px;">
-            Save Settings
+            保存设置
         </button>
     </div>
 
