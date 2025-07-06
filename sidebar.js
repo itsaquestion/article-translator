@@ -82,16 +82,14 @@ function clearAllChatHistory() {
 
 /**
  * 处理清除对话按钮点击事件
- * 显示确认对话框，确认后清除所有对话历史
+ * 直接清除所有对话历史
  */
 function handleClearChat() {
-    if (confirm('确定要清除全部对话吗？此操作不可撤销。')) {
-        clearAllChatHistory();
-        showError({
-            message: '已清除全部对话',
-            type: 'info'
-        });
-    }
+    clearAllChatHistory();
+    showError({
+        message: '已清除全部对话',
+        type: 'info'
+    });
 }
 
 // Function to display error messages
