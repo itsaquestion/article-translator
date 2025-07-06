@@ -305,6 +305,19 @@
             width: 14px;
             height: 14px;
         }
+
+        .rendered-markdown {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 8px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 6px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -341,15 +354,21 @@
     </div>
 
     <div class="content">
-        <div id="content-tab" class="tab-content active">
+        <div id="content-tab" class="tab-content active" style="position: relative;">
             <textarea id="contentArea" class="content-area" readonly placeholder="页面原文将显示在这里..."></textarea>
+            <div id="content-rendered" class="rendered-markdown"></div>
         </div>
-        <div id="translation-tab" class="tab-content">
+        <div id="translation-tab" class="tab-content" style="position: relative;">
             <textarea id="translationArea" class="content-area" readonly placeholder="翻译后的文本将显示在这里..."></textarea>
+            <div id="translation-rendered" class="rendered-markdown"></div>
         </div>
     </div>
 
     <div class="footer-toolbar">
+        <div style="display: flex; align-items: center; gap: 4px; margin-right: auto;">
+            <input type="checkbox" id="renderMarkdown" checked>
+            <label for="renderMarkdown" style="font-size: 12px; color: rgb(71 85 105); cursor: pointer;">渲染Markdown</label>
+        </div>
         <button id="copyButton" class="toolbar-button" title="复制到剪贴板">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -477,6 +496,7 @@
 
     <div id="error"></div>
 
+    <script src="libs/marked.js"></script>
     <script src="settings.js"></script>
     <script src="sidebar.js"></script>
 </body>

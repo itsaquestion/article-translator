@@ -5,6 +5,9 @@ let loadingIndicator;
 let errorDiv;
 let contentArea;
 let translationArea;
+let contentRendered;
+let translationRendered;
+let renderMarkdownCheckbox;
 let copyButton;
 let currentTab = 'content';
 let currentContent = '';
@@ -48,16 +51,34 @@ function hideLoading() {
     loadingIndicator.style.display = 'none';
 }
 
+// Function to render markdown
+function renderMarkdown() {
+    if (renderMarkdownCheckbox.checked) {
+        contentRendered.innerHTML = marked.parse(contentArea.value);
+        translationRendered.innerHTML = marked.parse(translationArea.value);
+        contentRendered.style.display = 'block';
+        translationRendered.style.display = 'block';
+        contentArea.style.display = 'none';
+        translationArea.style.display = 'none';
+    } else {
+        contentRendered.style.display = 'none';
+        translationRendered.style.display = 'none';
+        contentArea.style.display = 'block';
+        translationArea.style.display = 'block';
+    }
+}
+
 // Function to update the content
 function updateContent(markdown) {
     currentContent = markdown;
     contentArea.value = markdown;
+    renderMarkdown();
 }
 
 // Function to apply font settings
 async function applyFontSettings() {
     const settings = await Settings.load();
-    const areas = [contentArea, translationArea];
+    const areas = [contentArea, translationArea, contentRendered, translationRendered];
     areas.forEach(area => {
         if (area) {
             area.style.fontFamily = settings.font_family;
@@ -69,7 +90,7 @@ async function applyFontSettings() {
 // Function to apply text colors
 async function applyTextColors() {
     const settings = await Settings.load();
-    const areas = [contentArea, translationArea];
+    const areas = [contentArea, translationArea, contentRendered, translationRendered];
     areas.forEach(area => {
         if (area) {
             area.style.color = settings.text_color;
@@ -123,6 +144,7 @@ async function handleTranslation() {
     }
 
     translationArea.value = '';
+    renderMarkdown();
     clearError();
     
     isTranslating = true;
@@ -134,6 +156,7 @@ async function handleTranslation() {
         currentUrl,
         (chunk) => {
             translationArea.value += chunk;
+            renderMarkdown();
         },
         (error) => {
             showError(error);
@@ -417,9 +440,6 @@ function requestContent() {
         if (tabs[0]) {
             chrome.tabs.sendMessage(tabs[0].id, { action: 'getHTML' });
             currentUrl = tabs[0].url;
-        } else {
-            hideLoading();
-            showError('No active tab found');
         }
     });
 }
@@ -483,6 +503,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     errorDiv = document.getElementById('error');
     contentArea = document.getElementById('contentArea');
     translationArea = document.getElementById('translationArea');
+    contentRendered = document.getElementById('content-rendered');
+    translationRendered = document.getElementById('translation-rendered');
+    renderMarkdownCheckbox = document.getElementById('renderMarkdown');
     copyButton = document.getElementById('copyButton');
     
     // Set up tab switching
@@ -497,6 +520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeSettings').addEventListener('click', () => toggleSettings(false));
     document.getElementById('saveSettings').addEventListener('click', saveSettingsFromForm);
     copyButton.addEventListener('click', handleCopy);
+    renderMarkdownCheckbox.addEventListener('change', renderMarkdown);
     
     // Set up color pickers
     document.getElementById('textColor').addEventListener('change', async (e) => {
