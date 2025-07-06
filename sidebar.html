@@ -318,6 +318,96 @@
             border-radius: 6px;
             display: none;
         }
+
+        /* Chat styles */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            background: white;
+            border: 1px solid rgb(226 232 240);
+            border-radius: 6px 6px 0 0;
+            min-height: 200px;
+            max-height: calc(100vh - 200px);
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .chat-message.user {
+            background: rgb(59 130 246);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .chat-message.ai {
+            background: rgb(243 244 246);
+            color: rgb(31 41 55);
+            margin-right: auto;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border: 1px solid rgb(226 232 240);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid rgb(226 232 240);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            color: rgb(31 41 55);
+            resize: vertical;
+            min-height: 20px;
+            max-height: 100px;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: rgb(59 130 246);
+            box-shadow: 0 0 0 1px rgb(59 130 246);
+        }
+
+        .chat-send-btn {
+            padding: 8px 16px;
+            background: rgb(59 130 246);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .chat-send-btn:hover {
+            background: rgb(37 99 235);
+        }
+
+        .chat-send-btn:disabled {
+            background: rgb(156 163 175);
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -325,6 +415,7 @@
         <div class="tab-buttons">
             <button class="tab-button active" data-tab="content">原文</button>
             <button class="tab-button" data-tab="translation">译文</button>
+            <button class="tab-button" data-tab="chat">对话</button>
         </div>
         <div class="action-buttons">
             <button id="refreshButton" class="icon-button" title="提取原文">
@@ -361,6 +452,15 @@
         <div id="translation-tab" class="tab-content" style="position: relative;">
             <textarea id="translationArea" class="content-area" readonly placeholder="翻译后的文本将显示在这里..."></textarea>
             <div id="translation-rendered" class="rendered-markdown"></div>
+        </div>
+        <div id="chat-tab" class="tab-content">
+            <div class="chat-container">
+                <div id="chatMessages" class="chat-messages"></div>
+                <div class="chat-input-area">
+                    <textarea id="chatInput" class="chat-input" placeholder="输入您的消息..." rows="3"></textarea>
+                    <button id="chatSendBtn" class="chat-send-btn">发送</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -454,6 +554,14 @@
                 <button id="removeTranslation" class="icon-button" style="flex: 1; background: rgb(239 68 68); color: white; padding: 4px 8px;">
                     Remove Current Translation
                 </button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">Chat Settings</div>
+            <div class="form-group">
+                <label for="chatSystemPrompt">Chat System Prompt:</label>
+                <textarea id="chatSystemPrompt" placeholder="你是一位有用的AI助手"></textarea>
             </div>
         </div>
 

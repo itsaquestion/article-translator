@@ -14,6 +14,15 @@ let currentContent = '';
 let currentUrl = '';
 let isTranslating = false;
 
+// Chat Elements
+let chatMessages;
+let chatInput;
+let chatSendBtn;
+let chatContainer;
+let currentChatMessages = [];
+let isChatting = false;
+let chatController = null;
+
 // Function to display error messages
 function showError(error) {
     // Clear previous classes
@@ -279,6 +288,7 @@ async function loadSettingsIntoForm() {
     
     // Update other settings
     document.getElementById('temperature').value = settings.temperature;
+    document.getElementById('chatSystemPrompt').value = settings.chat_system_prompt;
     document.getElementById('fontFamily').value = settings.font_family;
     document.getElementById('fontSize').value = settings.font_size;
     document.getElementById('textColor').value = settings.text_color;
@@ -315,6 +325,11 @@ async function saveSettingsFromForm() {
         const temperature = parseFloat(document.getElementById('temperature').value);
         if (!isNaN(temperature)) {
             settings.temperature = temperature;
+        }
+        
+        const chatSystemPrompt = document.getElementById('chatSystemPrompt').value;
+        if (chatSystemPrompt) {
+            settings.chat_system_prompt = chatSystemPrompt;
         }
         
         const fontFamily = document.getElementById('fontFamily').value;
@@ -459,6 +474,150 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
+// Chat Functions
+function displayChatMessage(content, isUser = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${isUser ? 'user' : 'ai'}`;
+    messageDiv.textContent = content;
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function updateChatSendButton(isSending) {
+    chatSendBtn.disabled = isSending;
+    chatSendBtn.textContent = isSending ? '发送中...' : '发送';
+}
+
+async function sendChatMessage() {
+    const userMessage = chatInput.value.trim();
+    if (!userMessage || isChatting) return;
+    
+    // Display user message
+    displayChatMessage(userMessage, true);
+    currentChatMessages.push({ role: 'user', content: userMessage });
+    
+    // Clear input and update UI
+    chatInput.value = '';
+    isChatting = true;
+    updateChatSendButton(true);
+    
+    try {
+        await callChatAPI(userMessage);
+    } catch (error) {
+        showError(`聊天错误: ${error.message}`);
+        isChatting = false;
+        updateChatSendButton(false);
+    }
+}
+
+async function callChatAPI(userMessage) {
+    try {
+        // Stop any existing chat request
+        if (chatController) {
+            chatController.abort();
+        }
+        
+        // Create new controller
+        chatController = new AbortController();
+        
+        const settings = await Settings.load();
+        const currentBackend = settings.backends[settings.currentBackend];
+        
+        if (!currentBackend.api_key) {
+            throw new Error('API密钥未设置，请前往设置页面配置');
+        }
+        
+        // Prepare messages
+        const messages = [
+            { role: 'system', content: settings.chat_system_prompt },
+            ...currentChatMessages
+        ];
+        
+        const requestBody = {
+            model: currentBackend.model,
+            messages: messages,
+            temperature: settings.temperature,
+            stream: true,
+            max_tokens: 8192
+        };
+        
+        const response = await fetch(`${currentBackend.base_url}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentBackend.api_key}`,
+                'HTTP-Referer': 'https://imtass.me',
+                'X-Title': 'Article Translator'
+            },
+            body: JSON.stringify(requestBody),
+            signal: chatController.signal
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.statusText}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        // Create AI message element
+        const aiMessageDiv = document.createElement('div');
+        aiMessageDiv.className = 'chat-message ai';
+        chatMessages.appendChild(aiMessageDiv);
+        
+        let aiResponse = '';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') continue;
+                    
+                    try {
+                        const parsed = JSON.parse(data);
+                        const content = parsed.choices[0]?.delta?.content;
+                        if (content) {
+                            aiResponse += content;
+                            aiMessageDiv.textContent = aiResponse;
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse chunk:', e);
+                    }
+                }
+            }
+        }
+        
+        // Add AI response to chat history
+        if (aiResponse) {
+            currentChatMessages.push({ role: 'assistant', content: aiResponse });
+        }
+        
+        chatController = null;
+        isChatting = false;
+        updateChatSendButton(false);
+        
+    } catch (error) {
+        chatController = null;
+        isChatting = false;
+        updateChatSendButton(false);
+        
+        if (error.name === 'AbortError') {
+            showError({type: 'info', message: '聊天已停止'});
+        } else {
+            throw error;
+        }
+    }
+}
+
 // Function to handle copy action
 async function handleCopy() {
     try {
@@ -508,6 +667,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderMarkdownCheckbox = document.getElementById('renderMarkdown');
     copyButton = document.getElementById('copyButton');
     
+    // Initialize chat elements
+    chatMessages = document.getElementById('chatMessages');
+    chatInput = document.getElementById('chatInput');
+    chatSendBtn = document.getElementById('chatSendBtn');
+    chatContainer = document.querySelector('.chat-container');
+    
     // Set up tab switching
     document.querySelectorAll('.tab-button').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -521,6 +686,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('saveSettings').addEventListener('click', saveSettingsFromForm);
     copyButton.addEventListener('click', handleCopy);
     renderMarkdownCheckbox.addEventListener('change', renderMarkdown);
+    
+    // Set up chat functionality
+    chatSendBtn.addEventListener('click', sendChatMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendChatMessage();
+        }
+    });
     
     // Set up color pickers
     document.getElementById('textColor').addEventListener('change', async (e) => {

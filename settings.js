@@ -14,6 +14,7 @@ class Settings {
             user_prompt: 'Translate the following content from {domain}:\n\n{content}'
         }],
         temperature: 0.7,
+        chat_system_prompt: '你是一位有用的AI助手',
         font_family: 'system-ui, -apple-system, sans-serif',
         font_size: '12',
         text_color: '#000000',
@@ -30,6 +31,7 @@ class Settings {
         settings.currentTranslation = settings.currentTranslation ?? defaults.currentTranslation;
         settings.translations = settings.translations ?? [...defaults.translations];
         settings.temperature = settings.temperature ?? defaults.temperature;
+        settings.chat_system_prompt = settings.chat_system_prompt ?? defaults.chat_system_prompt;
         settings.font_family = settings.font_family ?? defaults.font_family;
         settings.font_size = settings.font_size ?? defaults.font_size;
         settings.text_color = settings.text_color ?? defaults.text_color;
