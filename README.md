@@ -14,6 +14,9 @@ A Chrome extension that extracts article content and translates it using customi
   - Stream translation results as they are generated
   - Stop translation at any time
   - Scroll through previous translations while new content is being generated
+- **Markdown Rendering**:
+  - View original and translated content as rendered Markdown.
+  - Toggle between raw text and rendered view with a switch in the toolbar.
 - **Text Appearance**:
   - Customizable font family (including support for Chinese fonts)
   - Adjustable font size
