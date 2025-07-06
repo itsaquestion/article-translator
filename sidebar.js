@@ -893,10 +893,13 @@ function updateLastAiMessageClass() {
         msg.classList.remove('last-ai');
     });
     
-    // 为最后一条AI消息添加 last-ai 类
-    const aiMessages = document.querySelectorAll('.chat-message.ai');
-    if (aiMessages.length > 0) {
-        aiMessages[aiMessages.length - 1].classList.add('last-ai');
+    // 只有当最后一条消息是AI消息时，才为其添加 last-ai 类
+    const allMessages = document.querySelectorAll('.chat-message');
+    if (allMessages.length > 0) {
+        const lastMessage = allMessages[allMessages.length - 1];
+        if (lastMessage.classList.contains('ai')) {
+            lastMessage.classList.add('last-ai');
+        }
     }
 }
 
@@ -1233,7 +1236,7 @@ async function handleCopy() {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-    // Add CSS styles for message actions
+    // Add CSS styles for message actions - Updated to fix floating button overlap issue
     const style = document.createElement('style');
     style.textContent = `
         .chat-message {
@@ -1251,22 +1254,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             gap: 2px;
         }
         
-        /* AI消息按钮：对话框右侧，与底部对齐 */
+        /* AI消息按钮：在右下角与气泡重叠 */
         .chat-message.ai .message-actions {
-            right: -60px;
-            bottom: 0;
+            right: -8px; /* 右下角位置 */
+            bottom: -8px; /* 向下移动，与气泡底部重叠 */
         }
         
-        /* 用户消息按钮：对话框右侧下方，与右侧对齐 */
+        /* 用户消息按钮：在左下角与气泡重叠 */
         .chat-message.user .message-actions {
-            right: 0;
-            top: 100%;
-            margin-top: 4px;
+            left: -8px; /* 用户消息按钮在左侧 */
+            bottom: -8px; /* 向下移动，与气泡底部重叠 */
         }
         
         .chat-message:hover .message-actions,
         .chat-message.last-ai .message-actions {
             display: flex;
+        }
+        
+        /* 最后一个AI消息的按钮位置在气泡外面 */
+        .chat-message.last-ai .message-actions {
+            bottom: -32px; /* 向下移动更多，完全在气泡外面 */
         }
         
         .action-btn {
@@ -1306,9 +1313,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             color: rgb(239, 68, 68);
         }
         
-        /* 确保聊天容器有足够的右边距 */
+        /* 减少聊天容器的右边距，因为按钮现在重叠了 */
         .chat-messages {
-            padding-right: 70px; /* 为AI消息按钮预留空间 */
+            padding-right: 16px; /* 减少右边距 */
         }
     `;
     document.head.appendChild(style);
